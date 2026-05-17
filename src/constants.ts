@@ -88,6 +88,11 @@ export const TEAM: TeamMember[] = [
     image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=400',
   },
   {
+    name: 'Tapiwanashe Mandiveyi',
+    role: 'CEO',
+    image: '/assets/team/placeholder-member.jpg',
+  },
+  {
     name: 'Dr. Sarah Phiri',
     role: 'Head of Programs',
     image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',

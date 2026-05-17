@@ -1,7 +1,45 @@
 import { motion } from 'motion/react';
-import { Mail, Phone, MapPin, Send, MessageCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import React, { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export default function Contact() {
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccess(false);
+    setError(false);
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      first_name: formData.get('first_name'),
+      last_name: formData.get('last_name'),
+      email: formData.get('email'),
+      subject: formData.get('subject'),
+      message: formData.get('message'),
+    };
+
+    try {
+      const { error: supabaseError } = await supabase
+        .from('contacts')
+        .insert([data]);
+
+      if (supabaseError) throw supabaseError;
+      
+      setSuccess(true);
+      (e.target as HTMLFormElement).reset();
+    } catch (err) {
+      console.error('Contact error:', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="py-24 bg-cream relative overflow-hidden rounded-[4rem] mx-4 sm:mx-8 shadow-2xl border border-gold/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -35,7 +73,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Call Us</p>
-                  <p className="text-xl font-bold text-navy">+263 77 123 4567</p>
+                  <p className="text-xl font-bold text-navy">+263 77 538 6704</p>
                 </div>
               </div>
 
@@ -58,24 +96,24 @@ export default function Contact() {
             transition={{ duration: 0.6 }}
             className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-gold/10 shadow-xl"
           >
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">First Name</label>
-                  <input type="text" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
+                  <input name="first_name" required type="text" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Last Name</label>
-                  <input type="text" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
+                  <input name="last_name" required type="text" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-                <input type="email" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
+                <input name="email" required type="email" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Subject</label>
-                <select className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all appearance-none cursor-pointer">
+                <select name="subject" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all appearance-none cursor-pointer">
                   <option>Partnership Inquiry</option>
                   <option>Scholarship Application</option>
                   <option>Volunteer Opportunity</option>
@@ -84,10 +122,21 @@ export default function Contact() {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Your Message</label>
-                <textarea rows={4} className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all"></textarea>
+                <textarea name="message" required rows={4} className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition-all"></textarea>
               </div>
-              <button className="w-full py-5 bg-navy text-white rounded-xl font-bold text-lg flex items-center justify-center hover:bg-navy/90 transition-all transform hover:scale-[1.02] shadow-xl hover:shadow-navy/20">
-                Send Message <Send className="ml-3 h-5 w-5 text-gold" />
+              
+              {success && (
+                <p className="text-green-600 font-bold text-sm text-center">Thank you! Your message has been sent.</p>
+              )}
+              {error && (
+                <p className="text-red-500 font-medium text-sm text-center">Failed to send message. Please check Supabase configuration.</p>
+              )}
+
+              <button 
+                disabled={loading}
+                className="w-full py-5 bg-navy text-white rounded-xl font-bold text-lg flex items-center justify-center hover:bg-navy/90 transition-all transform hover:scale-[1.02] shadow-xl hover:shadow-navy/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Sending...' : 'Send Message'} <Send className="ml-3 h-5 w-5 text-gold" />
               </button>
             </form>
           </motion.div>

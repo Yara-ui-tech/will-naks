@@ -2,7 +2,7 @@ import { MessageCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function WhatsAppButton() {
-  const phoneNumber = '263771234567'; // Placeholder
+  const phoneNumber = '263775386704'; // Zimbabwe number from user
   const message = 'Hello WILL-NAKS Foundation, I would like to learn more about your programs.';
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
