@@ -1,0 +1,8 @@
+{
+  "name": "WILL-NAKS FOUNDATION",
+  "description": "A professional NGO foundation dedicated to empowering underprivileged students through education, mentorship, and opportunity.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
