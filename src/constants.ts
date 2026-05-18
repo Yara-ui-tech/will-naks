@@ -55,42 +55,25 @@ export const PROGRAMS: Program[] = [
   },
 ];
 
-export const TESTIMONIALS: Testimonial[] = [
-  {
-    name: 'Faith A.',
-    role: 'Medical Student',
-    content: 'The WILL-NAKS Foundation didn\'t just pay my fees; they gave me a mentor who believed in me when I didn\'t believe in myself.',
-    image: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=400',
-  },
-  {
-    name: 'Samuel K.',
-    role: 'Engineering Graduate',
-    content: 'Thanks to the full scholarship, I was able to focus entirely on my studies and graduate with honors. I am now working to give back.',
-    image: 'https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?auto=format&fit=crop&q=80&w=400',
-  },
-  {
-    name: 'Grace M.',
-    role: 'Law Student',
-    content: 'The community outreach program found me in my village. Today, I am studying to become a human rights lawyer.',
-    image: 'https://images.unsplash.com/photo-1523444279540-3023e160a28f?auto=format&fit=crop&q=80&w=400',
-  },
-];
+export const TESTIMONIALS: Testimonial[] = [];
 
 export const TEAM: TeamMember[] = [
   {
     name: 'Willie Nakunyada',
     role: 'Founder',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+    image: '/assets/team/founder.avif',
   },
   {
     name: 'Simbarashe O Manongwa',
     role: 'CEO',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=400',
+    image: '/assets/team/simbarashe.jpg',
+    linkedin: 'https://linkedin.com/in/simbarashe-manongwa-815b28342',
   },
   {
     name: 'Tapiwanashe Mandiveyi',
     role: 'CEO',
-    image: '/assets/team/placeholder-member.jpg',
+    image: '/assets/team/tapiwanashe.jpg',
+    linkedin: 'https://linkedin.com/in/tapiwanashe-mandiveyi',
   },
   {
     name: 'Dr. Sarah Phiri',

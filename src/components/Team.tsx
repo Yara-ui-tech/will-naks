@@ -31,20 +31,32 @@ export default function Team() {
                     alt={member.name} 
                     className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=400';
+                    }}
                   />
                 </div>
-                <div className="absolute bottom-2 right-2 p-4 bg-gold rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 shadow-lg">
-                    <Linkedin className="h-5 w-5 text-navy" />
-                </div>
+                {member.linkedin && (
+                  <a 
+                    href={member.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-2 right-2 p-4 bg-gold rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 shadow-lg hover:bg-navy hover:text-gold"
+                  >
+                      <Linkedin className="h-5 w-5" />
+                  </a>
+                )}
               </div>
               <h4 className="text-2xl font-bold text-navy mb-2 group-hover:text-gold transition-colors duration-300">{member.name}</h4>
               <p className="text-gold font-bold text-xs uppercase tracking-widest mb-8 font-sans">{member.role}</p>
               
-              <div className="flex justify-center space-x-6">
-                <a href="#" className="p-3 bg-cream rounded-full text-navy/40 hover:text-navy hover:bg-gold transition-all duration-300">
-                  <Twitter className="h-5 w-5" />
-                </a>
-                <a href="#" className="p-3 bg-cream rounded-full text-navy/40 hover:text-navy hover:bg-gold transition-all duration-300">
+              <div className="flex justify-center space-x-6 invisible group-hover:visible transition-all duration-500">
+                {member.linkedin && (
+                  <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="p-3 bg-cream rounded-full text-navy/40 hover:text-navy hover:bg-gold transition-all duration-300">
+                    <Linkedin className="h-5 w-5" />
+                  </a>
+                )}
+                <a href="mailto:info@will-naks.org" className="p-3 bg-cream rounded-full text-navy/40 hover:text-navy hover:bg-gold transition-all duration-300">
                   <Mail className="h-5 w-5" />
                 </a>
               </div>

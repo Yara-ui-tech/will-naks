@@ -3,66 +3,58 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import About from './components/About';
-import Impact from './components/Impact';
-import Programs from './components/Programs';
-import Testimonials from './components/Testimonials';
-import Donation from './components/Donation';
-import Gallery from './components/Gallery';
-import Team from './components/Team';
-import Partners from './components/Partners';
-import Contact from './components/Contact';
-import Footer from './components/Footer';
-import WhatsAppButton from './components/WhatsAppButton';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Home from './pages/Home';
+import AdminDashboard from './components/Admin/Dashboard';
+import AdminLogin from './components/Admin/Login';
+import { supabase } from './lib/supabase';
 
 export default function App() {
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        // Sync profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!profile && session.user.email === 'goyaracorp@gmail.com') {
+          // Auto-create lead admin
+          await supabase.from('profiles').insert([
+            { id: session.user.id, email: session.user.email, role: 'admin' }
+          ]);
+        }
+      }
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) return null;
+
   return (
-    <div className="min-h-screen bg-white font-sans selection:bg-[#D4AF37] selection:text-[#001F3F]">
-      <Navbar />
-      <main>
-        <Hero />
-        
-        <section id="about" className="py-24">
-          <About />
-        </section>
-
-        <section id="impact" className="py-24">
-          <Impact />
-        </section>
-
-        <section id="programs" className="py-24">
-          <Programs />
-        </section>
-
-        <section id="testimonials" className="py-24">
-          <Testimonials />
-        </section>
-
-        <section id="donation" className="py-24">
-          <Donation />
-        </section>
-
-        <section id="gallery" className="py-24">
-          <Gallery />
-        </section>
-
-        <section id="team" className="py-24">
-          <Team />
-        </section>
-
-        <section id="partners" className="py-24">
-          <Partners />
-        </section>
-
-        <section id="contact" className="py-24">
-          <Contact />
-        </section>
-      </main>
-      <Footer />
-      <WhatsAppButton />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route 
+          path="/admin" 
+          element={session ? <AdminDashboard /> : <AdminLogin />} 
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
