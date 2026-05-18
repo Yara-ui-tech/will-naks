@@ -10,10 +10,10 @@ export const NAV_LINKS: NavLink[] = [
 ];
 
 export const STATS: Stat[] = [
-  { label: 'Students Assisted', value: '1,200', suffix: '+' },
-  { label: 'Scholarships Awarded', value: '450', suffix: '+' },
-  { label: 'Communities Reached', value: '25', suffix: '' },
-  { label: 'Active Volunteers', value: '150', suffix: '+' },
+  { label: 'Students Assisted', value: '0', suffix: '+' },
+  { label: 'Scholarships Awarded', value: '0', suffix: '+' },
+  { label: 'Communities Reached', value: '0', suffix: '' },
+  { label: 'Active Volunteers', value: '0', suffix: '+' },
 ];
 
 export const PROGRAMS: Program[] = [
@@ -75,46 +75,8 @@ export const TEAM: TeamMember[] = [
     image: '/assets/team/tapiwanashe.jpg',
     linkedin: 'https://linkedin.com/in/tapiwanashe-mandiveyi',
   },
-  {
-    name: 'Dr. Sarah Phiri',
-    role: 'Head of Programs',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
-  },
-  {
-    name: 'John Banda',
-    role: 'Student Relations',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400',
-  },
 ];
 
-export const PARTNERS: Partner[] = [
-  { 
-    name: 'TechGlobal Solutions', 
-    logo: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?auto=format&fit=crop&q=80&w=200',
-    specialization: 'Leading provider of digital infrastructure and educational technology across Africa.'
-  },
-  { 
-    name: 'AfriGrowth Capital', 
-    logo: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=200',
-    specialization: 'Investment firm specializing in sustainable development and community-led startups.'
-  },
-  { 
-    name: 'Harvest Heritage', 
-    logo: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&q=80&w=200',
-    specialization: 'Agricultural experts focused on food security and rural community empowerment.'
-  },
-  { 
-    name: 'Unity Health Group', 
-    logo: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&q=80&w=200',
-    specialization: 'Regional healthcare network providing medical outreach and student health programs.'
-  },
-];
+export const PARTNERS: Partner[] = [];
 
-export const GALLERY = [
-  'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1524178232363-1fb28f74b671?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1542810634-71277d95dcbb?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1510531704581-5b2870972060?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1522661067900-ab829854a57f?auto=format&fit=crop&q=80&w=800',
-];
+export const GALLERY = [];

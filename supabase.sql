@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS contacts (
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 
 -- Allow public insertion
+DROP POLICY IF EXISTS "Allow public insert contacts" ON contacts;
 CREATE POLICY "Allow public insert contacts" ON contacts
   FOR INSERT WITH CHECK (true);
 
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS donations (
 ALTER TABLE donations ENABLE ROW LEVEL SECURITY;
 
 -- Allow public insertion
+DROP POLICY IF EXISTS "Allow public insert donations" ON donations;
 CREATE POLICY "Allow public insert donations" ON donations
   FOR INSERT WITH CHECK (true);
 
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS gallery (
 );
 
 ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public view gallery" ON gallery;
 CREATE POLICY "Allow public view gallery" ON gallery FOR SELECT USING (true);
 
 -- 4. Testimonials Table
@@ -57,8 +60,11 @@ CREATE TABLE IF NOT EXISTS testimonials (
 );
 
 ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public view approved testimonials" ON testimonials;
 CREATE POLICY "Allow public view approved testimonials" ON testimonials 
   FOR SELECT USING (is_approved = true);
+
+DROP POLICY IF EXISTS "Allow public insert testimonials" ON testimonials;
 CREATE POLICY "Allow public insert testimonials" ON testimonials
   FOR INSERT WITH CHECK (true);
 
@@ -70,12 +76,18 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
 CREATE POLICY "Users can view their own profile" ON profiles
   FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
 CREATE POLICY "Admins can view all profiles" ON profiles
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
+
+DROP POLICY IF EXISTS "Admins can update profiles" ON profiles;
 CREATE POLICY "Admins can update profiles" ON profiles
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
