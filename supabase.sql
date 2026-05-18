@@ -92,3 +92,70 @@ CREATE POLICY "Admins can update profiles" ON profiles
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
+
+-- 6. Scholarship Applications
+CREATE TABLE IF NOT EXISTS scholarships (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  education_level TEXT NOT NULL,
+  institution TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  status TEXT DEFAULT 'pending'
+);
+
+ALTER TABLE scholarships ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public insert scholarships" ON scholarships FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins manage scholarships" ON scholarships FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- 7. Partner Requests
+CREATE TABLE IF NOT EXISTS partners (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  org_name TEXT NOT NULL,
+  industry TEXT NOT NULL,
+  message TEXT NOT NULL,
+  email TEXT NOT NULL
+);
+
+ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public insert partners" ON partners FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins manage partners" ON partners FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- 8. Volunteer Signups
+CREATE TABLE IF NOT EXISTS volunteers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  expertise TEXT NOT NULL,
+  availability TEXT NOT NULL
+);
+
+ALTER TABLE volunteers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public insert volunteers" ON volunteers FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins manage volunteers" ON volunteers FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- 9. News & Blog
+CREATE TABLE IF NOT EXISTS news (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  image_url TEXT,
+  category TEXT,
+  author_id UUID REFERENCES auth.users(id)
+);
+
+ALTER TABLE news ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public view news" ON news FOR SELECT USING (true);
+CREATE POLICY "Admins manage news" ON news FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);

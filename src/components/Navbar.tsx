@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Menu, X, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link, useLocation } from 'react-router-dom';
 import { NAV_LINKS } from '../constants';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,13 +20,13 @@ export default function Navbar() {
   return (
     <nav
       className={`fixed w-full z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white shadow-md py-4' : 'bg-transparent py-6'
+        scrolled || location.pathname !== '/' ? 'bg-white shadow-md py-4 text-navy' : 'bg-transparent py-6 text-white'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <a href="#home" className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center space-x-3">
               <div className="relative h-12 w-12 flex items-center justify-center">
                 <img 
                   src="/assets/logo.png" 
@@ -40,40 +42,40 @@ export default function Navbar() {
                 </div>
               </div>
               <span className={`font-serif font-bold text-2xl tracking-tight transition-colors ${
-                scrolled ? 'text-navy' : 'text-white'
+                scrolled || location.pathname !== '/' ? 'text-navy' : 'text-white'
               }`}>
                 WILL-NAKS <span className="text-gold">FOUNDATION</span>
               </span>
-            </a>
+            </Link>
           </div>
 
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center space-x-8 mr-6">
             {NAV_LINKS.map((link) => (
-              <a
+              <Link
                 key={link.name}
-                href={link.href}
+                to={link.href}
                 className={`text-xs font-bold uppercase tracking-[0.2em] transition-colors hover:text-gold ${
-                  scrolled ? 'text-navy' : 'text-white'
+                  scrolled || location.pathname !== '/' ? 'text-navy' : 'text-white'
                 }`}
               >
                 {link.name}
-              </a>
+              </Link>
             ))}
           </div>
 
           <div className="flex items-center space-x-4">
-            <a
-              href="#donation"
+            <Link
+              to="/support"
               className="hidden sm:block bg-gold hover:bg-gold-light text-navy px-6 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105 shadow-lg hover:shadow-gold/20"
             >
               Donate Now
-            </a>
+            </Link>
             
             <button
               onClick={() => setIsOpen(!isOpen)}
               className={`p-2 rounded-full transition-all border lg:hidden ${
-                scrolled 
+                scrolled || location.pathname !== '/'
                   ? 'text-navy border-navy/10 bg-cream' 
                   : 'text-white border-white/20 bg-white/10 backdrop-blur-md'
               } hover:bg-gold hover:text-navy hover:border-gold`}
@@ -139,37 +141,39 @@ export default function Navbar() {
 
               <div className="flex-1 flex flex-col justify-center space-y-8">
                 {NAV_LINKS.map((link, i) => (
-                  <motion.a
+                  <motion.div
                     key={link.name}
-                    href={link.href}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.1 + i * 0.05 }}
-                    onClick={() => setIsOpen(false)}
                     className="group"
                   >
-                    <div className="flex items-center justify-between">
+                    <Link 
+                      to={link.href} 
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-between"
+                    >
                       <span className="text-4xl md:text-5xl font-serif italic text-navy group-hover:text-gold transition-colors duration-300">
                         {link.name}
                       </span>
                       <motion.div
                         className="h-[1px] w-0 bg-gold group-hover:w-12 transition-all duration-300"
                       />
-                    </div>
-                  </motion.a>
+                    </Link>
+                  </motion.div>
                 ))}
               </div>
 
               <div className="pt-8 border-t border-navy/10 mt-auto">
                 <p className="text-gray-400 text-sm mb-6 font-sans uppercase tracking-[0.2em]">Ready to make an impact?</p>
-                <a
-                  href="#donation"
+                <Link
+                  to="/support"
                   onClick={() => setIsOpen(false)}
                   className="block w-full text-center bg-navy text-white px-8 py-5 rounded-full font-bold text-lg hover:shadow-2xl hover:shadow-navy/20 transition-all flex items-center justify-center group"
                 >
                   Donate Now
                   <Heart className="ml-2 h-5 w-5 text-gold group-hover:fill-gold transition-all" />
-                </a>
+                </Link>
               </div>
             </motion.div>
           </>

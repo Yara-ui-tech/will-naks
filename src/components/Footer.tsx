@@ -1,9 +1,27 @@
-import { Heart, Facebook, Instagram, Twitter, Linkedin, Mail, Phone, MapPin, ArrowUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Heart, Facebook, Instagram, Twitter, Linkedin, ArrowUp } from 'lucide-react';
 
 export default function Footer() {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const quickLinks = [
+    { name: 'Home', path: '/' },
+    { name: 'About Us', path: '/about' },
+    { name: 'Our Programs', path: '/programs' },
+    { name: 'Impact Stories', path: '/impact' },
+    { name: 'Meet Team', path: '/team' },
+    { name: 'Gallery', path: '/gallery' },
+  ];
+
+  const supportLinks = [
+    { name: 'Donate Now', path: '/support' },
+    { name: 'Become a Partner', path: '/support' },
+    { name: 'Scholarship App', path: '/support' },
+    { name: 'Volunteer Signup', path: '/support' },
+    { name: 'News & Blog', path: '/news' },
+  ];
 
   return (
     <footer className="bg-navy text-white pt-24 pb-12 overflow-hidden relative">
@@ -56,12 +74,12 @@ export default function Footer() {
               <div className="absolute -bottom-2 left-0 w-8 h-1 bg-gold rounded-full"></div>
             </h4>
             <ul className="space-y-4">
-              {['Home', 'About Us', 'Our Programs', 'Impact Stories', 'Meet the Team', 'Gallery'].map((link) => (
-                <li key={link}>
-                  <a href={`#${link.toLowerCase().replace(' ', '')}`} className="text-gray-400 hover:text-gold transition-colors flex items-center group">
+              {quickLinks.map((link) => (
+                <li key={link.name}>
+                  <Link to={link.path} className="text-gray-400 hover:text-gold transition-colors flex items-center group">
                     <span className="w-1.5 h-1.5 rounded-full bg-gold mr-3 scale-0 group-hover:scale-100 transition-transform"></span>
-                    {link}
-                  </a>
+                    {link.name}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -74,12 +92,12 @@ export default function Footer() {
               <div className="absolute -bottom-2 left-0 w-8 h-1 bg-gold rounded-full"></div>
             </h4>
             <ul className="space-y-4">
-              {['Donate Now', 'Become a Partner', 'Scholarship Application', 'Volunteer Signup', 'Events', 'News & Blog'].map((link) => (
-                <li key={link}>
-                  <a href="#" className="text-gray-400 hover:text-gold transition-colors flex items-center group">
+              {supportLinks.map((link) => (
+                <li key={link.name}>
+                  <Link to={link.path} className="text-gray-400 hover:text-gold transition-colors flex items-center group">
                     <span className="w-1.5 h-1.5 rounded-full bg-gold mr-3 scale-0 group-hover:scale-100 transition-transform"></span>
-                    {link}
-                  </a>
+                    {link.name}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -110,6 +128,7 @@ export default function Footer() {
             © {new Date().getFullYear()} WILL-NAKS FOUNDATION. All rights reserved.
           </p>
           <div className="flex space-x-8 text-sm text-gray-500">
+            <Link to="/admin" className="hover:text-gold transition-colors font-bold uppercase tracking-widest text-[10px]">Admin Portal</Link>
             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
           </div>

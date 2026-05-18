@@ -1,5 +1,4 @@
 import React from 'react';
-import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import About from '../components/About';
 import Impact from '../components/Impact';
@@ -10,14 +9,10 @@ import Gallery from '../components/Gallery';
 import Team from '../components/Team';
 import Partners from '../components/Partners';
 import Contact from '../components/Contact';
-import Footer from '../components/Footer';
-import WhatsAppButton from '../components/WhatsAppButton';
-import DonationNotification from '../components/DonationNotification';
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#D4AF37] selection:text-[#001F3F]">
-      <Navbar />
       <main>
         <Hero />
         
@@ -57,9 +52,6 @@ export default function Home() {
           <Contact />
         </section>
       </main>
-      <Footer />
-      <WhatsAppButton />
-      <DonationNotification />
     </div>
   );
 }

@@ -11,16 +11,22 @@ import {
   Plus,
   Trash2,
   Check,
-  X
+  X,
+  Handshake,
+  UserPlus,
+  Newspaper
 } from 'lucide-react';
 
-type View = 'overview' | 'donations' | 'scholarships' | 'gallery' | 'testimonials' | 'admins';
+type View = 'overview' | 'donations' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins';
 
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<View>('overview');
   const [data, setData] = useState<any>({
     donations: [],
     scholarships: [],
+    partners: [],
+    volunteers: [],
+    news: [],
     gallery: [],
     testimonials: [],
     profiles: []
@@ -33,9 +39,12 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [donations, scholarships, gallery, testimonials, profiles] = await Promise.all([
+    const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles] = await Promise.all([
       supabase.from('donations').select('*').order('created_at', { ascending: false }),
-      supabase.from('contacts').select('*').eq('subject', 'Scholarship Application').order('created_at', { ascending: false }),
+      supabase.from('scholarships').select('*').order('created_at', { ascending: false }),
+      supabase.from('partners').select('*').order('created_at', { ascending: false }),
+      supabase.from('volunteers').select('*').order('created_at', { ascending: false }),
+      supabase.from('news').select('*').order('created_at', { ascending: false }),
       supabase.from('gallery').select('*').order('created_at', { ascending: false }),
       supabase.from('testimonials').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('*')
@@ -44,6 +53,9 @@ export default function AdminDashboard() {
     setData({
       donations: donations.data || [],
       scholarships: scholarships.data || [],
+      partners: partners.data || [],
+      volunteers: volunteers.data || [],
+      news: news.data || [],
       gallery: gallery.data || [],
       testimonials: testimonials.data || [],
       profiles: profiles.data || []
@@ -81,6 +93,16 @@ export default function AdminDashboard() {
     }
   };
 
+  const addNews = async () => {
+    const title = prompt('News Title:');
+    const content = prompt('News Content:');
+    const image_url = prompt('Image URL:');
+    if (title && content) {
+      await supabase.from('news').insert([{ title, content, image_url, category: 'General' }]);
+      fetchData();
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
@@ -92,10 +114,13 @@ export default function AdminDashboard() {
           <span className="font-bold tracking-tight">ADMIN PANEL</span>
         </div>
 
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto pr-2 pb-8 scrollbar-hide">
           <NavItem active={activeView === 'overview'} onClick={() => setActiveView('overview')} icon={LayoutDashboard} label="Overview" />
           <NavItem active={activeView === 'donations'} onClick={() => setActiveView('donations')} icon={Heart} label="Donations" />
           <NavItem active={activeView === 'scholarships'} onClick={() => setActiveView('scholarships')} icon={GraduationCap} label="Scholarships" />
+          <NavItem active={activeView === 'partners'} onClick={() => setActiveView('partners')} icon={Handshake} label="Partners" />
+          <NavItem active={activeView === 'volunteers'} onClick={() => setActiveView('volunteers')} icon={UserPlus} label="Volunteers" />
+          <NavItem active={activeView === 'news'} onClick={() => setActiveView('news')} icon={Newspaper} label="News & Blog" />
           <NavItem active={activeView === 'gallery'} onClick={() => setActiveView('gallery')} icon={ImageIcon} label="Gallery" />
           <NavItem active={activeView === 'testimonials'} onClick={() => setActiveView('testimonials')} icon={MessageSquare} label="Testimonials" />
           <NavItem active={activeView === 'admins'} onClick={() => setActiveView('admins')} icon={Users} label="Admin Users" />
@@ -113,10 +138,15 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <div className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-navy capitalize">{activeView}</h1>
+          <h1 className="text-2xl font-bold text-navy capitalize">{activeView.replace('-', ' ')}</h1>
           {activeView === 'gallery' && (
             <button onClick={addToGallery} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
               <Plus className="h-4 w-4" /> <span>Add Photo</span>
+            </button>
+          )}
+          {activeView === 'news' && (
+            <button onClick={addNews} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
+              <Plus className="h-4 w-4" /> <span>Add Post</span>
             </button>
           )}
         </header>
@@ -140,12 +170,72 @@ export default function AdminDashboard() {
             {data.scholarships.map((s: any) => (
               <div key={s.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex justify-between mb-4">
-                  <h3 className="font-bold text-navy">{s.first_name} {s.last_name}</h3>
+                  <h3 className="font-bold text-navy">{s.full_name}</h3>
                   <span className="text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString()}</span>
                 </div>
-                <p className="text-gray-600 text-sm mb-4">{s.message}</p>
-                <div className="flex items-center space-x-2 text-xs text-gold font-bold uppercase">
-                  <span>{s.email}</span>
+                <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                  <div><span className="text-gray-400">Level:</span> {s.education_level}</div>
+                  <div><span className="text-gray-400">Institution:</span> {s.institution}</div>
+                  <div><span className="text-gray-400">Email:</span> {s.email}</div>
+                  <div><span className="text-gray-400">Status:</span> <span className="text-gold font-bold uppercase text-[10px]">{s.status}</span></div>
+                </div>
+                <p className="text-gray-600 text-sm italic">"{s.reason}"</p>
+                <div className="mt-4 flex justify-end space-x-2">
+                   <button onClick={() => deleteItem('scholarships', s.id)} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase transition-colors">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeView === 'partners' && (
+          <div className="space-y-4">
+            {data.partners.map((p: any) => (
+              <div key={p.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex justify-between mb-4">
+                  <h3 className="font-bold text-navy">{p.org_name}</h3>
+                  <span className="text-xs text-gray-400">{new Date(p.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                  <div><span className="text-gray-400">Industry:</span> {p.industry}</div>
+                  <div><span className="text-gray-400">Email:</span> {p.email}</div>
+                </div>
+                <p className="text-gray-600 text-sm">{p.message}</p>
+                <div className="mt-4 flex justify-end space-x-2">
+                   <button onClick={() => deleteItem('partners', p.id)} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase transition-colors">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeView === 'volunteers' && (
+          <Table headers={['Date', 'Name', 'Email', 'Expertise', 'Availability', 'Actions']}>
+            {data.volunteers.map((v: any) => (
+              <tr key={v.id} className="border-b">
+                <td className="p-4 text-sm">{new Date(v.created_at).toLocaleDateString()}</td>
+                <td className="p-4 font-bold">{v.full_name}</td>
+                <td className="p-4 text-sm">{v.email}</td>
+                <td className="p-4 text-sm">{v.expertise}</td>
+                <td className="p-4 text-sm">{v.availability}</td>
+                <td className="p-4">
+                   <button onClick={() => deleteItem('volunteers', v.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
+
+        {activeView === 'news' && (
+           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.news.map((post: any) => (
+              <div key={post.id} className="group relative bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+                {post.image_url && <img src={post.image_url} alt="" className="w-full h-40 object-cover rounded-2xl mb-4" />}
+                <h3 className="font-bold text-navy mb-2">{post.title}</h3>
+                <p className="text-gray-500 text-xs line-clamp-3 mb-4">{post.content}</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(post.created_at).toLocaleDateString()}</span>
+                  <button onClick={() => deleteItem('news', post.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </div>
             ))}
@@ -232,19 +322,21 @@ function OverviewStats({ data }: any) {
   const stats = [
     { label: 'Total Donations', value: `$${data.donations.reduce((acc: number, d: any) => acc + d.amount, 0)}`, icon: Heart, color: 'bg-red-50 text-red-600' },
     { label: 'Scholarship Apps', value: data.scholarships.length, icon: GraduationCap, color: 'bg-blue-50 text-blue-600' },
+    { label: 'Volunteers', value: data.volunteers.length, icon: UserPlus, color: 'bg-green-50 text-green-600' },
+    { label: 'Partner Requests', value: data.partners.length, icon: Handshake, color: 'bg-orange-50 text-orange-600' },
+    { label: 'Recent News', value: data.news.length, icon: Newspaper, color: 'bg-indigo-50 text-indigo-600' },
     { label: 'Gallery Photos', value: data.gallery.length, icon: ImageIcon, color: 'bg-purple-50 text-purple-600' },
-    { label: 'Testimonials', value: data.testimonials.length, icon: MessageSquare, color: 'bg-green-50 text-green-600' },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
       {stats.map((stat, i) => (
         <div key={i} className="bg-white p-6 rounded-[1.5rem] shadow-sm border border-gray-100 ring-1 ring-gold/5">
           <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
             <stat.icon className="h-6 w-6" />
           </div>
           <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
-          <p className="text-3xl font-bold text-navy mt-1">{stat.value}</p>
+          <p className="text-2xl font-bold text-navy mt-1">{stat.value}</p>
         </div>
       ))}
     </div>

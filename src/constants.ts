@@ -1,12 +1,14 @@
 import { NavLink, Program, Testimonial, TeamMember, Partner, Stat } from './types';
 
 export const NAV_LINKS: NavLink[] = [
-  { name: 'Home', href: '#home' },
-  { name: 'About', href: '#about' },
-  { name: 'Programs', href: '#programs' },
-  { name: 'Impact', href: '#impact' },
-  { name: 'Team', href: '#team' },
-  { name: 'Contact', href: '#contact' },
+  { name: 'Home', href: '/' },
+  { name: 'About Us', href: '/about' },
+  { name: 'Programs', href: '/programs' },
+  { name: 'Team', href: '/team' },
+  { name: 'Gallery', href: '/gallery' },
+  { name: 'Impact', href: '/impact' },
+  { name: 'Support', href: '/support' },
+  { name: 'News', href: '/news' },
 ];
 
 export const STATS: Stat[] = [
