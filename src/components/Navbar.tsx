@@ -66,6 +66,12 @@ export default function Navbar() {
 
           <div className="flex items-center space-x-4">
             <Link
+              to="/join"
+              className="hidden md:block bg-navy text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105 shadow-lg border border-white/10 hover:bg-navy/90"
+            >
+              Join Us
+            </Link>
+            <Link
               to="/support"
               className="hidden sm:block bg-gold hover:bg-gold-light text-navy px-6 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105 shadow-lg hover:shadow-gold/20"
             >
@@ -164,8 +170,15 @@ export default function Navbar() {
                 ))}
               </div>
 
-              <div className="pt-8 border-t border-navy/10 mt-auto">
-                <p className="text-gray-400 text-sm mb-6 font-sans uppercase tracking-[0.2em]">Ready to make an impact?</p>
+              <div className="pt-8 border-t border-navy/10 mt-auto space-y-4">
+                <Link
+                  to="/admin"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center space-x-2 text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-gold transition-colors"
+                >
+                  <Heart className="h-3 w-3" /> <span>Admin Portal</span>
+                </Link>
+                <p className="text-gray-400 text-sm font-sans uppercase tracking-[0.2em]">Ready to make an impact?</p>
                 <Link
                   to="/support"
                   onClick={() => setIsOpen(false)}

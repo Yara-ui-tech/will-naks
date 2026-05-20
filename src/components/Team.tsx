@@ -1,8 +1,30 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Linkedin, Twitter, Mail } from 'lucide-react';
+import { Linkedin, Mail } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { TEAM } from '../constants';
 
 export default function Team() {
+  const [team, setTeam] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTeam = async () => {
+      const { data } = await supabase.from('team').select('*').order('display_order', { ascending: true });
+      if (data && data.length > 0) {
+        setTeam(data);
+      } else {
+        setTeam(TEAM.map((member, i) => ({
+          id: `static-${i}`,
+          name: member.name,
+          role: member.role,
+          image_url: member.image,
+          linkedin_url: (member as any).linkedin
+        })));
+      }
+    };
+    fetchTeam();
+  }, []);
+
   return (
     <div className="py-24 bg-cream">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -15,9 +37,9 @@ export default function Team() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {TEAM.map((member, index) => (
+          {(team.length > 0 ? team : []).map((member, index) => (
             <motion.div
-              key={member.name}
+              key={member.id || member.name}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -27,7 +49,7 @@ export default function Team() {
               <div className="relative mb-8 inline-block">
                 <div className="w-48 h-48 rounded-full overflow-hidden border-[10px] border-cream shadow-inner group-hover:border-gold/20 transition-all duration-500">
                   <img 
-                    src={member.image} 
+                    src={member.image_url || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=400'} 
                     alt={member.name} 
                     className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
                     referrerPolicy="no-referrer"
@@ -36,9 +58,9 @@ export default function Team() {
                     }}
                   />
                 </div>
-                {member.linkedin && (
+                {member.linkedin_url && (
                   <a 
-                    href={member.linkedin}
+                    href={member.linkedin_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="absolute bottom-2 right-2 p-4 bg-gold rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 shadow-lg hover:bg-navy hover:text-gold"
@@ -51,8 +73,8 @@ export default function Team() {
               <p className="text-gold font-bold text-xs uppercase tracking-widest mb-8 font-sans">{member.role}</p>
               
               <div className="flex justify-center space-x-6 invisible group-hover:visible transition-all duration-500">
-                {member.linkedin && (
-                  <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="p-3 bg-cream rounded-full text-navy/40 hover:text-navy hover:bg-gold transition-all duration-300">
+                {member.linkedin_url && (
+                  <a href={member.linkedin_url} target="_blank" rel="noopener noreferrer" className="p-3 bg-cream rounded-full text-navy/40 hover:text-navy hover:bg-gold transition-all duration-300">
                     <Linkedin className="h-5 w-5" />
                   </a>
                 )}

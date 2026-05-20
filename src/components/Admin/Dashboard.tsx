@@ -85,20 +85,23 @@ export default function AdminDashboard() {
   const handleLogout = () => supabase.auth.signOut();
 
   const toggleApproval = async (id: string, current: boolean) => {
-    await supabase.from('testimonials').update({ is_approved: !current }).eq('id', id);
+    const { error } = await supabase.from('testimonials').update({ is_approved: !current }).eq('id', id);
+    if (error) alert(`Error updating: ${error.message}`);
     fetchData();
   };
 
   const deleteItem = async (table: string, id: string) => {
     if (confirm('Are you sure you want to delete this item?')) {
-      await supabase.from(table).delete().eq('id', id);
+      const { error } = await supabase.from(table).delete().eq('id', id);
+      if (error) alert(`Error deleting: ${error.message}`);
       fetchData();
     }
   };
 
   const promoteAdmin = async (id: string) => {
     if (confirm('Promote this user to Admin?')) {
-      await supabase.from('profiles').update({ role: 'admin' }).eq('id', id);
+      const { error } = await supabase.from('profiles').update({ role: 'admin' }).eq('id', id);
+      if (error) alert(`Error promoting: ${error.message}`);
       fetchData();
     }
   };
@@ -107,7 +110,8 @@ export default function AdminDashboard() {
     const url = prompt('Enter Image URL:');
     const caption = prompt('Enter Caption:');
     if (url) {
-      await supabase.from('gallery').insert([{ url, caption, category: 'Foundation' }]);
+      const { error } = await supabase.from('gallery').insert([{ url, caption, category: 'Foundation' }]);
+      if (error) alert(`Error adding to gallery: ${error.message}`);
       fetchData();
     }
   };
@@ -117,7 +121,8 @@ export default function AdminDashboard() {
     const content = prompt('News Content:');
     const image_url = prompt('Image URL:');
     if (title && content) {
-      await supabase.from('news').insert([{ title, content, image_url, category: 'General' }]);
+      const { error } = await supabase.from('news').insert([{ title, content, image_url, category: 'General' }]);
+      if (error) alert(`Error adding news: ${error.message}`);
       fetchData();
     }
   };
@@ -128,7 +133,8 @@ export default function AdminDashboard() {
     const image_url = prompt('Image URL:');
     const linkedin_url = prompt('LinkedIn URL:');
     if (name && role) {
-      await supabase.from('team').insert([{ name, role, image_url, linkedin_url }]);
+      const { error } = await supabase.from('team').insert([{ name, role, image_url, linkedin_url }]);
+      if (error) alert(`Error adding team member: ${error.message}`);
       fetchData();
     }
   };
@@ -138,7 +144,8 @@ export default function AdminDashboard() {
     const date = prompt('Date (YYYY-MM-DD):');
     const location = prompt('Location:');
     if (title && date) {
-      await supabase.from('events').insert([{ title, event_date: date, location }]);
+      const { error } = await supabase.from('events').insert([{ title, event_date: date, location }]);
+      if (error) alert(`Error adding event: ${error.message}`);
       fetchData();
     }
   };
@@ -149,7 +156,8 @@ export default function AdminDashboard() {
     const content = prompt('The Story:');
     const year = prompt('Year:');
     if (name && content) {
-      await supabase.from('impact_stories').insert([{ name, role, content, year }]);
+      const { error } = await supabase.from('impact_stories').insert([{ name, role, content, year }]);
+      if (error) alert(`Error adding story: ${error.message}`);
       fetchData();
     }
   };
@@ -158,13 +166,15 @@ export default function AdminDashboard() {
     const platform = prompt('Platform Name:');
     const url = prompt('URL:');
     if (platform && url) {
-      await supabase.from('social_links').insert([{ platform, url }]);
+      const { error } = await supabase.from('social_links').insert([{ platform, url }]);
+      if (error) alert(`Error adding link: ${error.message}`);
       fetchData();
     }
   };
 
   const updateStatus = async (table: string, id: string, status: string) => {
-    await supabase.from(table).update({ status }).eq('id', id);
+    const { error } = await supabase.from(table).update({ status }).eq('id', id);
+    if (error) alert(`Error updating status: ${error.message}`);
     fetchData();
   };
 

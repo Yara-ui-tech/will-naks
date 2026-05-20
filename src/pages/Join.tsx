@@ -167,7 +167,7 @@ export default function Join() {
                 <p className="text-gold font-bold uppercase tracking-widest text-sm mb-4">Official Channel</p>
                 <h3 className="text-2xl font-bold mb-6">Connect with us on WhatsApp</h3>
                 <a 
-                  href="https://whatsapp.com/channel/your-channel-id" 
+                  href="https://whatsapp.com/channel/0029VbCsKgO4NVicfQ7ZCB3W" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-3 bg-[#25D366] text-white px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-transform"

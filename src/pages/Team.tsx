@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { Linkedin, Mail } from 'lucide-react';
+import { TEAM } from '../constants';
 
 export default function Team() {
   const [team, setTeam] = useState<any[]>([]);
@@ -11,6 +12,14 @@ export default function Team() {
       const { data } = await supabase.from('team').select('*').order('display_order', { ascending: true });
       if (data && data.length > 0) {
         setTeam(data);
+      } else {
+        setTeam(TEAM.map((member, i) => ({
+          id: `static-${i}`,
+          name: member.name,
+          role: member.role,
+          image_url: member.image,
+          linkedin_url: (member as any).linkedin
+        })));
       }
     };
     fetchTeam();

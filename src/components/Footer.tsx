@@ -1,7 +1,27 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Facebook, Instagram, Twitter, Linkedin, ArrowUp } from 'lucide-react';
+import { Heart, Facebook, Instagram, Twitter, Linkedin, ArrowUp, Globe } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function Footer() {
+  const [socials, setSocials] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSocials = async () => {
+      const { data } = await supabase.from('social_links').select('*').eq('is_active', true);
+      if (data) setSocials(data);
+    };
+    fetchSocials();
+  }, []);
+
+  const getIcon = (platform: string) => {
+    const p = platform.toLowerCase();
+    if (p.includes('facebook')) return <Facebook className="h-5 w-5" />;
+    if (p.includes('instagram')) return <Instagram className="h-5 w-5" />;
+    if (p.includes('twitter') || p.includes(' x')) return <Twitter className="h-5 w-5" />;
+    if (p.includes('linkedin')) return <Linkedin className="h-5 w-5" />;
+    return <Globe className="h-5 w-5" />;
+  };
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -22,6 +42,7 @@ export default function Footer() {
     { name: 'Scholarship App', path: '/support' },
     { name: 'Volunteer Signup', path: '/support' },
     { name: 'News & Blog', path: '/news' },
+    { name: 'Admin Portal', path: '/admin' },
   ];
 
   return (
@@ -52,19 +73,36 @@ export default function Footer() {
             <p className="text-gray-400 leading-relaxed text-lg italic">
               “Empowering Potential Beyond Circumstances”
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all">
-                <Linkedin className="h-5 w-5" />
-              </a>
+            <div className="flex flex-wrap gap-4">
+              {socials.length > 0 ? (
+                socials.map((s) => (
+                  <a 
+                    key={s.id} 
+                    href={s.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all"
+                    title={s.platform}
+                  >
+                    {getIcon(s.platform)}
+                  </a>
+                ))
+              ) : (
+                <>
+                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all">
+                    <Facebook className="h-5 w-5" />
+                  </a>
+                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all">
+                    <Instagram className="h-5 w-5" />
+                  </a>
+                  <a href="https://whatsapp.com/channel/0029VbCsKgO4NVicfQ7ZCB3W" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all">
+                    <Twitter className="h-5 w-5" />
+                  </a>
+                  <a href="http://linkedin.com/company/will-naks-foundation/" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:text-navy transition-all">
+                    <Linkedin className="h-5 w-5" />
+                  </a>
+                </>
+              )}
             </div>
           </div>
 

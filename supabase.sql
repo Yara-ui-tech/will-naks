@@ -19,6 +19,12 @@ DROP POLICY IF EXISTS "Allow public insert contacts" ON contacts;
 CREATE POLICY "Allow public insert contacts" ON contacts
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Admins manage contacts" ON contacts;
+CREATE POLICY "Admins manage contacts" ON contacts
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
 -- 2. Donations Table
 CREATE TABLE IF NOT EXISTS donations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -35,6 +41,12 @@ DROP POLICY IF EXISTS "Allow public insert donations" ON donations;
 CREATE POLICY "Allow public insert donations" ON donations
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Admins manage donations" ON donations;
+CREATE POLICY "Admins manage donations" ON donations
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
 -- 3. Gallery Table
 CREATE TABLE IF NOT EXISTS gallery (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -47,6 +59,12 @@ CREATE TABLE IF NOT EXISTS gallery (
 ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public view gallery" ON gallery;
 CREATE POLICY "Allow public view gallery" ON gallery FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admins manage gallery" ON gallery;
+CREATE POLICY "Admins manage gallery" ON gallery
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
 
 -- 4. Testimonials Table
 CREATE TABLE IF NOT EXISTS testimonials (
@@ -68,30 +86,59 @@ DROP POLICY IF EXISTS "Allow public insert testimonials" ON testimonials;
 CREATE POLICY "Allow public insert testimonials" ON testimonials
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Admins manage testimonials" ON testimonials;
+CREATE POLICY "Admins manage testimonials" ON testimonials
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
 -- 5. Admin Users Table
 CREATE TABLE IF NOT EXISTS profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id),
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   role TEXT DEFAULT 'user' -- 'admin' or 'user'
 );
 
+-- Enable RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
-CREATE POLICY "Users can view their own profile" ON profiles
-  FOR SELECT USING (auth.uid() = id);
+-- Profiles Policies
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
+CREATE POLICY "Public profiles are viewable by everyone" ON profiles
+  FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
-CREATE POLICY "Admins can view all profiles" ON profiles
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins manage profiles" ON profiles;
+CREATE POLICY "Admins manage profiles" ON profiles
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
-DROP POLICY IF EXISTS "Admins can update profiles" ON profiles;
-CREATE POLICY "Admins can update profiles" ON profiles
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+-- Function to handle new user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, role)
+  VALUES (
+    new.id, 
+    new.email,
+    CASE 
+      WHEN NOT EXISTS (SELECT 1 FROM public.profiles WHERE role = 'admin') THEN 'admin'
+      ELSE 'user'
+    END
   );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to call the function on signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- 6. Scholarship Applications
 CREATE TABLE IF NOT EXISTS scholarships (
@@ -240,8 +287,8 @@ CREATE TABLE IF NOT EXISTS members (
 ALTER TABLE members ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public insert members" ON members;
 CREATE POLICY "Public insert members" ON members FOR INSERT WITH CHECK (true);
-DROP POLICY IF EXISTS "Admins view members" ON members;
-CREATE POLICY "Admins view members" ON members FOR SELECT USING (
+DROP POLICY IF EXISTS "Admins manage members" ON members;
+CREATE POLICY "Admins manage members" ON members FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
