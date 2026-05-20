@@ -13,6 +13,8 @@ import Gallery from './pages/Gallery';
 import Impact from './pages/Impact';
 import Support from './pages/Support';
 import News from './pages/News';
+import Join from './pages/Join';
+import Testimonials from './pages/Testimonials';
 import AdminDashboard from './components/Admin/Dashboard';
 import AdminLogin from './components/Admin/Login';
 import Navbar from './components/Navbar';
@@ -82,6 +84,8 @@ export default function App() {
           <Route path="/impact" element={<Impact />} />
           <Route path="/support" element={<Support />} />
           <Route path="/news" element={<News />} />
+          <Route path="/join" element={<Join />} />
+          <Route path="/testimonials" element={<Testimonials />} />
           <Route 
             path="/admin" 
             element={session ? <AdminDashboard /> : <AdminLogin />} 

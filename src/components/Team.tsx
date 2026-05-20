@@ -29,7 +29,7 @@ export default function Team() {
                   <img 
                     src={member.image} 
                     alt={member.name} 
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
                     referrerPolicy="no-referrer"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=400';

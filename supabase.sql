@@ -106,7 +106,9 @@ CREATE TABLE IF NOT EXISTS scholarships (
 );
 
 ALTER TABLE scholarships ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public insert scholarships" ON scholarships;
 CREATE POLICY "Public insert scholarships" ON scholarships FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage scholarships" ON scholarships;
 CREATE POLICY "Admins manage scholarships" ON scholarships FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
@@ -122,7 +124,9 @@ CREATE TABLE IF NOT EXISTS partners (
 );
 
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public insert partners" ON partners;
 CREATE POLICY "Public insert partners" ON partners FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage partners" ON partners;
 CREATE POLICY "Admins manage partners" ON partners FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
@@ -138,7 +142,9 @@ CREATE TABLE IF NOT EXISTS volunteers (
 );
 
 ALTER TABLE volunteers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public insert volunteers" ON volunteers;
 CREATE POLICY "Public insert volunteers" ON volunteers FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage volunteers" ON volunteers;
 CREATE POLICY "Admins manage volunteers" ON volunteers FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
@@ -155,7 +161,102 @@ CREATE TABLE IF NOT EXISTS news (
 );
 
 ALTER TABLE news ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view news" ON news;
 CREATE POLICY "Public view news" ON news FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins manage news" ON news;
 CREATE POLICY "Admins manage news" ON news FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- 10. Team Table
+CREATE TABLE IF NOT EXISTS team (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  image_url TEXT,
+  linkedin_url TEXT,
+  display_order INTEGER DEFAULT 0
+);
+
+ALTER TABLE team ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view team" ON team;
+CREATE POLICY "Public view team" ON team FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins manage team" ON team;
+CREATE POLICY "Admins manage team" ON team FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- 11. Events Table
+CREATE TABLE IF NOT EXISTS events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  title TEXT NOT NULL,
+  description TEXT,
+  event_date TIMESTAMPTZ,
+  location TEXT,
+  image_url TEXT,
+  status TEXT DEFAULT 'upcoming'
+);
+
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view events" ON events;
+CREATE POLICY "Public view events" ON events FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins manage events" ON events;
+CREATE POLICY "Admins manage events" ON events FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- 12. Impact Stories Table
+CREATE TABLE IF NOT EXISTS impact_stories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  image_url TEXT,
+  year TEXT
+);
+
+ALTER TABLE impact_stories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view impact_stories" ON impact_stories;
+CREATE POLICY "Public view impact_stories" ON impact_stories FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins manage impact_stories" ON impact_stories;
+CREATE POLICY "Admins manage impact_stories" ON impact_stories FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- 13. Members Table
+CREATE TABLE IF NOT EXISTS members (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  phone TEXT,
+  interests TEXT[],
+  whatsapp_joined BOOLEAN DEFAULT false
+);
+
+ALTER TABLE members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public insert members" ON members;
+CREATE POLICY "Public insert members" ON members FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins view members" ON members;
+CREATE POLICY "Admins view members" ON members FOR SELECT USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- 14. Social Links Table
+CREATE TABLE IF NOT EXISTS social_links (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  platform TEXT NOT NULL, -- e.g. 'Facebook', 'Instagram', 'X'
+  url TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT true
+);
+
+ALTER TABLE social_links ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view social_links" ON social_links;
+CREATE POLICY "Public view social_links" ON social_links FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins manage social_links" ON social_links;
+CREATE POLICY "Admins manage social_links" ON social_links FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );

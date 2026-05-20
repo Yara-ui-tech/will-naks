@@ -1,9 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { TEAM } from '../constants';
+import { supabase } from '../lib/supabase';
 import { Linkedin, Mail } from 'lucide-react';
 
 export default function Team() {
+  const [team, setTeam] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTeam = async () => {
+      const { data } = await supabase.from('team').select('*').order('display_order', { ascending: true });
+      if (data && data.length > 0) {
+        setTeam(data);
+      }
+    };
+    fetchTeam();
+  }, []);
+
   return (
     <div className="pt-32 pb-24">
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24 text-center">
@@ -24,9 +36,9 @@ export default function Team() {
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
-          {TEAM.map((member, i) => (
+          {team.map((member, i) => (
             <motion.div
-              key={member.name}
+              key={member.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -35,9 +47,9 @@ export default function Team() {
             >
               <div className="relative h-[450px] rounded-[40px] overflow-hidden shadow-2xl">
                 <img 
-                  src={member.image} 
+                  src={member.image_url || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=400'} 
                   alt={member.name}
-                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-110 group-hover:scale-100"
+                  className="w-full h-full object-cover transition-all duration-700 scale-110 group-hover:scale-100"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-navy via-transparent to-transparent opacity-60"></div>
                 
@@ -52,8 +64,8 @@ export default function Team() {
                       </p>
                     </div>
                     <div className="flex space-x-3 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                      {member.linkedin && (
-                        <a href={member.linkedin} target="_blank" rel="noreferrer" className="bg-white/10 backdrop-blur-md p-3 rounded-full text-white hover:bg-gold hover:text-navy transition-all">
+                      {member.linkedin_url && (
+                        <a href={member.linkedin_url} target="_blank" rel="noreferrer" className="bg-white/10 backdrop-blur-md p-3 rounded-full text-white hover:bg-gold hover:text-navy transition-all">
                           <Linkedin className="h-5 w-5" />
                         </a>
                       )}

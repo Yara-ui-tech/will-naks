@@ -1,24 +1,38 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { supabase } from '../lib/supabase';
 import { Quote } from 'lucide-react';
 
 export default function Impact() {
-  const stories = [
-    {
-      name: "Tinashe's Journey",
-      role: "Engineering Student",
-      image: "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?auto=format&fit=crop&q=80&w=800",
-      content: "The scholarship didn't just pay for my books; it gave me the confidence to dream beyond my village. Today, I am internship with a top firm, building the infrastructure of tomorrow.",
-      year: "Class of 2023"
-    },
-    {
-      name: "Aamina's Vision",
-      role: "Medical Resident",
-      image: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=800",
-      content: "When I thought I had to drop out, WILL-NAKS stepped in. Their mentor supported me through my hardest exams. Now I am a doctor serving the same community that raised me.",
-      year: "Class of 2022"
-    }
-  ];
+  const [stories, setStories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchStories = async () => {
+      const { data } = await supabase.from('impact_stories').select('*').order('created_at', { ascending: false });
+      if (data && data.length > 0) {
+        setStories(data);
+      } else {
+        // Fallback for demo
+        setStories([
+          {
+            name: "Tinashe's Journey",
+            role: "Engineering Student",
+            image_url: "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?auto=format&fit=crop&q=80&w=800",
+            content: "The scholarship didn't just pay for my books; it gave me the confidence to dream beyond my village. Today, I am internship with a top firm, building the infrastructure of tomorrow.",
+            year: "Class of 2023"
+          },
+          {
+            name: "Aamina's Vision",
+            role: "Medical Resident",
+            image_url: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=800",
+            content: "When I thought I had to drop out, WILL-NAKS stepped in. Their mentor supported me through my hardest exams. Now I am a doctor serving the same community that raised me.",
+            year: "Class of 2022"
+          }
+        ]);
+      }
+    };
+    fetchStories();
+  }, []);
 
   return (
     <div className="pt-32 pb-24">
@@ -42,7 +56,7 @@ export default function Impact() {
         <div className="space-y-32">
           {stories.map((story, i) => (
             <motion.div
-              key={story.name}
+              key={story.id || story.name}
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -50,11 +64,11 @@ export default function Impact() {
             >
               <div className="flex-1 relative w-full lg:w-1/2">
                 <div className="absolute -top-12 -left-12 text-gold/20">
-                  <Quote size={200} weight="fill" />
+                  <Quote size={200} />
                 </div>
                 <div className="relative rounded-[60px] overflow-hidden shadow-2xl h-[600px]">
                   <img 
-                    src={story.image} 
+                    src={story.image_url} 
                     alt={story.name}
                     className="w-full h-full object-cover"
                   />

@@ -14,10 +14,14 @@ import {
   X,
   Handshake,
   UserPlus,
-  Newspaper
+  Newspaper,
+  Calendar,
+  Star,
+  Share2,
+  Users2
 } from 'lucide-react';
 
-type View = 'overview' | 'donations' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins';
+type View = 'overview' | 'donations' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members';
 
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<View>('overview');
@@ -29,7 +33,12 @@ export default function AdminDashboard() {
     news: [],
     gallery: [],
     testimonials: [],
-    profiles: []
+    profiles: [],
+    team: [],
+    events: [],
+    impact: [],
+    social: [],
+    members: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +48,7 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles] = await Promise.all([
+    const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles, team, events, impact, social, members] = await Promise.all([
       supabase.from('donations').select('*').order('created_at', { ascending: false }),
       supabase.from('scholarships').select('*').order('created_at', { ascending: false }),
       supabase.from('partners').select('*').order('created_at', { ascending: false }),
@@ -47,7 +56,12 @@ export default function AdminDashboard() {
       supabase.from('news').select('*').order('created_at', { ascending: false }),
       supabase.from('gallery').select('*').order('created_at', { ascending: false }),
       supabase.from('testimonials').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*')
+      supabase.from('profiles').select('*'),
+      supabase.from('team').select('*').order('display_order', { ascending: true }),
+      supabase.from('events').select('*').order('event_date', { ascending: false }),
+      supabase.from('impact_stories').select('*').order('created_at', { ascending: false }),
+      supabase.from('social_links').select('*').order('platform', { ascending: true }),
+      supabase.from('members').select('*').order('created_at', { ascending: false })
     ]);
 
     setData({
@@ -58,7 +72,12 @@ export default function AdminDashboard() {
       news: news.data || [],
       gallery: gallery.data || [],
       testimonials: testimonials.data || [],
-      profiles: profiles.data || []
+      profiles: profiles.data || [],
+      team: team.data || [],
+      events: events.data || [],
+      impact: impact.data || [],
+      social: social.data || [],
+      members: members.data || []
     });
     setLoading(false);
   };
@@ -103,6 +122,52 @@ export default function AdminDashboard() {
     }
   };
 
+  const addTeamMember = async () => {
+    const name = prompt('Name:');
+    const role = prompt('Role:');
+    const image_url = prompt('Image URL:');
+    const linkedin_url = prompt('LinkedIn URL:');
+    if (name && role) {
+      await supabase.from('team').insert([{ name, role, image_url, linkedin_url }]);
+      fetchData();
+    }
+  };
+
+  const addEvent = async () => {
+    const title = prompt('Event Title:');
+    const date = prompt('Date (YYYY-MM-DD):');
+    const location = prompt('Location:');
+    if (title && date) {
+      await supabase.from('events').insert([{ title, event_date: date, location }]);
+      fetchData();
+    }
+  };
+
+  const addImpactStory = async () => {
+    const name = prompt('Student Name:');
+    const role = prompt('Current Role:');
+    const content = prompt('The Story:');
+    const year = prompt('Year:');
+    if (name && content) {
+      await supabase.from('impact_stories').insert([{ name, role, content, year }]);
+      fetchData();
+    }
+  };
+
+  const addSocialLink = async () => {
+    const platform = prompt('Platform Name:');
+    const url = prompt('URL:');
+    if (platform && url) {
+      await supabase.from('social_links').insert([{ platform, url }]);
+      fetchData();
+    }
+  };
+
+  const updateStatus = async (table: string, id: string, status: string) => {
+    await supabase.from(table).update({ status }).eq('id', id);
+    fetchData();
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
@@ -120,8 +185,13 @@ export default function AdminDashboard() {
           <NavItem active={activeView === 'scholarships'} onClick={() => setActiveView('scholarships')} icon={GraduationCap} label="Scholarships" />
           <NavItem active={activeView === 'partners'} onClick={() => setActiveView('partners')} icon={Handshake} label="Partners" />
           <NavItem active={activeView === 'volunteers'} onClick={() => setActiveView('volunteers')} icon={UserPlus} label="Volunteers" />
+          <NavItem active={activeView === 'members'} onClick={() => setActiveView('members')} icon={Users2} label="Members" />
           <NavItem active={activeView === 'news'} onClick={() => setActiveView('news')} icon={Newspaper} label="News & Blog" />
+          <NavItem active={activeView === 'team'} onClick={() => setActiveView('team')} icon={Users} label="Team" />
+          <NavItem active={activeView === 'events'} onClick={() => setActiveView('events')} icon={Calendar} label="Events" />
+          <NavItem active={activeView === 'impact'} onClick={() => setActiveView('impact')} icon={Star} label="Impact Stories" />
           <NavItem active={activeView === 'gallery'} onClick={() => setActiveView('gallery')} icon={ImageIcon} label="Gallery" />
+          <NavItem active={activeView === 'social'} onClick={() => setActiveView('social')} icon={Share2} label="Social Links" />
           <NavItem active={activeView === 'testimonials'} onClick={() => setActiveView('testimonials')} icon={MessageSquare} label="Testimonials" />
           <NavItem active={activeView === 'admins'} onClick={() => setActiveView('admins')} icon={Users} label="Admin Users" />
         </nav>
@@ -147,6 +217,26 @@ export default function AdminDashboard() {
           {activeView === 'news' && (
             <button onClick={addNews} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
               <Plus className="h-4 w-4" /> <span>Add Post</span>
+            </button>
+          )}
+          {activeView === 'team' && (
+            <button onClick={addTeamMember} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
+              <Plus className="h-4 w-4" /> <span>Add Member</span>
+            </button>
+          )}
+          {activeView === 'events' && (
+            <button onClick={addEvent} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
+              <Plus className="h-4 w-4" /> <span>Add Event</span>
+            </button>
+          )}
+          {activeView === 'impact' && (
+            <button onClick={addImpactStory} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
+              <Plus className="h-4 w-4" /> <span>Add Story</span>
+            </button>
+          )}
+          {activeView === 'social' && (
+            <button onClick={addSocialLink} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
+              <Plus className="h-4 w-4" /> <span>Add Link</span>
             </button>
           )}
         </header>
@@ -180,7 +270,11 @@ export default function AdminDashboard() {
                   <div><span className="text-gray-400">Status:</span> <span className="text-gold font-bold uppercase text-[10px]">{s.status}</span></div>
                 </div>
                 <p className="text-gray-600 text-sm italic">"{s.reason}"</p>
-                <div className="mt-4 flex justify-end space-x-2">
+                <div className="mt-4 flex justify-between items-center">
+                   <div className="flex space-x-2">
+                     <button onClick={() => updateStatus('scholarships', s.id, 'approved')} className="bg-green-100 text-green-700 px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors">Approve</button>
+                     <button onClick={() => updateStatus('scholarships', s.id, 'denied')} className="bg-red-100 text-red-700 px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors">Deny</button>
+                   </div>
                    <button onClick={() => deleteItem('scholarships', s.id)} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase transition-colors">Delete</button>
                 </div>
               </div>
@@ -210,16 +304,111 @@ export default function AdminDashboard() {
         )}
 
         {activeView === 'volunteers' && (
-          <Table headers={['Date', 'Name', 'Email', 'Expertise', 'Availability', 'Actions']}>
+          <Table headers={['Date', 'Name', 'Email', 'Expertise', 'Status', 'Actions']}>
             {data.volunteers.map((v: any) => (
               <tr key={v.id} className="border-b">
                 <td className="p-4 text-sm">{new Date(v.created_at).toLocaleDateString()}</td>
                 <td className="p-4 font-bold">{v.full_name}</td>
                 <td className="p-4 text-sm">{v.email}</td>
                 <td className="p-4 text-sm">{v.expertise}</td>
-                <td className="p-4 text-sm">{v.availability}</td>
+                <td className="p-4 text-sm">
+                   <select 
+                     value={v.status || 'pending'} 
+                     onChange={(e) => updateStatus('volunteers', v.id, e.target.value)}
+                     className="bg-cream/50 rounded-lg px-2 py-1 outline-none text-xs font-bold uppercase text-navy"
+                   >
+                     <option value="pending">Pending</option>
+                     <option value="interviewed">Interviewed</option>
+                     <option value="active">Active</option>
+                     <option value="inactive">Inactive</option>
+                   </select>
+                </td>
                 <td className="p-4">
                    <button onClick={() => deleteItem('volunteers', v.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
+
+        {activeView === 'members' && (
+          <Table headers={['Date', 'Name', 'Email', 'Phone', 'WhatsApp', 'Actions']}>
+            {data.members.map((m: any) => (
+              <tr key={m.id} className="border-b">
+                <td className="p-4 text-sm">{new Date(m.created_at).toLocaleDateString()}</td>
+                <td className="p-4 font-bold">{m.full_name}</td>
+                <td className="p-4 text-sm">{m.email}</td>
+                <td className="p-4 text-sm">{m.phone}</td>
+                <td className="p-4 text-sm">
+                   {m.whatsapp_joined ? <Check className="text-green-500" /> : <X className="text-red-500" />}
+                </td>
+                <td className="p-4">
+                   <button onClick={() => deleteItem('members', m.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
+
+        {activeView === 'team' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.team.map((member: any) => (
+              <div key={member.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                {member.image_url && <img src={member.image_url} alt="" className="w-16 h-16 object-cover rounded-2xl" />}
+                <div className="flex-1">
+                  <h3 className="font-bold text-navy">{member.name}</h3>
+                  <p className="text-xs text-gold font-bold uppercase">{member.role}</p>
+                </div>
+                <button onClick={() => deleteItem('team', member.id)} className="text-red-500"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeView === 'events' && (
+          <div className="space-y-4">
+            {data.events.map((e: any) => (
+              <div key={e.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-navy">{e.title}</h3>
+                  <div className="flex space-x-4 text-xs text-gray-400 mt-1">
+                    <span>{new Date(e.event_date).toLocaleDateString()}</span>
+                    <span>{e.location}</span>
+                  </div>
+                </div>
+                <button onClick={() => deleteItem('events', e.id)} className="text-red-500"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeView === 'impact' && (
+          <div className="space-y-4">
+            {data.impact.map((s: any) => (
+              <div key={s.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex justify-between items-start">
+                <div className="flex space-x-4">
+                  {s.image_url && <img src={s.image_url} alt="" className="w-20 h-20 object-cover rounded-2xl" />}
+                  <div>
+                    <h3 className="font-bold text-navy">{s.name}</h3>
+                    <p className="text-xs text-gold font-bold uppercase mb-2">{s.role} - {s.year}</p>
+                    <p className="text-sm text-gray-500 line-clamp-2">{s.content}</p>
+                  </div>
+                </div>
+                <button onClick={() => deleteItem('impact_stories', s.id)} className="text-red-500"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeView === 'social' && (
+          <Table headers={['Platform', 'URL', 'Status', 'Actions']}>
+            {data.social.map((s: any) => (
+              <tr key={s.id} className="border-b">
+                <td className="p-4 font-bold">{s.platform}</td>
+                <td className="p-4 text-xs truncate max-w-xs">{s.url}</td>
+                <td className="p-4 uppercase text-[10px] font-bold text-gold">{s.is_active ? 'Active' : 'Inactive'}</td>
+                <td className="p-4 text-red-500">
+                  <button onClick={() => deleteItem('social_links', s.id)}><Trash2 className="h-4 w-4" /></button>
                 </td>
               </tr>
             ))}
@@ -322,14 +511,17 @@ function OverviewStats({ data }: any) {
   const stats = [
     { label: 'Total Donations', value: `$${data.donations.reduce((acc: number, d: any) => acc + d.amount, 0)}`, icon: Heart, color: 'bg-red-50 text-red-600' },
     { label: 'Scholarship Apps', value: data.scholarships.length, icon: GraduationCap, color: 'bg-blue-50 text-blue-600' },
+    { label: 'Total Members', value: data.members.length, icon: Users2, color: 'bg-gold/10 text-gold' },
+    { label: 'Upcoming Events', value: data.events.length, icon: Calendar, color: 'bg-navy/10 text-navy' },
     { label: 'Volunteers', value: data.volunteers.length, icon: UserPlus, color: 'bg-green-50 text-green-600' },
-    { label: 'Partner Requests', value: data.partners.length, icon: Handshake, color: 'bg-orange-50 text-orange-600' },
+    { label: 'Social Links', value: data.social.length, icon: Share2, color: 'bg-pink-50 text-pink-600' },
     { label: 'Recent News', value: data.news.length, icon: Newspaper, color: 'bg-indigo-50 text-indigo-600' },
+    { label: 'Impact Stories', value: data.impact.length, icon: Star, color: 'bg-yellow-50 text-yellow-600' },
     { label: 'Gallery Photos', value: data.gallery.length, icon: ImageIcon, color: 'bg-purple-50 text-purple-600' },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {stats.map((stat, i) => (
         <div key={i} className="bg-white p-6 rounded-[1.5rem] shadow-sm border border-gray-100 ring-1 ring-gold/5">
           <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>

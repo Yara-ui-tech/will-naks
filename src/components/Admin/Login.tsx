@@ -84,13 +84,14 @@ export default function AdminLogin() {
             {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')} <LogIn className="ml-3 h-5 w-5 text-gold" />
           </button>
 
-          <div className="text-center">
+          <div className="text-center pt-4 border-t border-gray-100">
+            <p className="text-gray-400 text-xs mb-3 font-medium uppercase tracking-widest">Administrative Access</p>
             <button 
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-xs font-bold text-gold uppercase tracking-widest hover:text-navy transition-colors"
+              className="w-full py-3 border-2 border-gold/20 text-navy rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-gold hover:border-gold transition-all"
             >
-              {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+              {isSignUp ? 'Already have an account? Sign In' : 'Register New Admin Account'}
             </button>
           </div>
         </form>

@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { STATS } from '../constants';
+import DynamicStats from './Stats';
 
 export default function Impact() {
   return (
@@ -14,25 +14,7 @@ export default function Impact() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
-          {STATS.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="text-center p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-gold/30 hover:bg-white/10 transition-all group"
-            >
-              <div className="text-4xl md:text-6xl font-bold text-gold mb-3 group-hover:scale-110 transition-transform">
-                {stat.value}{stat.suffix}
-              </div>
-              <div className="text-gray-400 font-bold uppercase tracking-wider text-xs md:text-sm font-sans">
-                {stat.label}
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        <DynamicStats />
       </div>
     </div>
   );

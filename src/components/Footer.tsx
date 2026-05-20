@@ -17,6 +17,7 @@ export default function Footer() {
 
   const supportLinks = [
     { name: 'Donate Now', path: '/support' },
+    { name: 'Become a member', path: '/join' },
     { name: 'Become a Partner', path: '/support' },
     { name: 'Scholarship App', path: '/support' },
     { name: 'Volunteer Signup', path: '/support' },
