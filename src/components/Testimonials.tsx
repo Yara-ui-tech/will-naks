@@ -13,12 +13,12 @@ export default function Testimonials() {
   useEffect(() => {
     fetchTestimonials();
 
-    // Real-time subscription
+    // Real-time subscription - listen for all changes to handle updates and approvals
     const channel = supabase
-      .channel('testimonials-changes')
+      .channel('testimonials-sync')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'testimonials' },
+        { event: '*', schema: 'public', table: 'testimonials' },
         () => fetchTestimonials()
       )
       .subscribe();

@@ -42,43 +42,70 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   useEffect(() => {
     fetchData();
+
+    // Subscribe to all relevant tables for live updates
+    const channel = supabase.channel('dashboard-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scholarships' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'partners' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'volunteers' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'testimonials' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'team' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_stories' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
-    const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles, team, events, impact, social, members] = await Promise.all([
-      supabase.from('donations').select('*').order('created_at', { ascending: false }),
-      supabase.from('scholarships').select('*').order('created_at', { ascending: false }),
-      supabase.from('partners').select('*').order('created_at', { ascending: false }),
-      supabase.from('volunteers').select('*').order('created_at', { ascending: false }),
-      supabase.from('news').select('*').order('created_at', { ascending: false }),
-      supabase.from('gallery').select('*').order('created_at', { ascending: false }),
-      supabase.from('testimonials').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*'),
-      supabase.from('team').select('*').order('display_order', { ascending: true }),
-      supabase.from('events').select('*').order('event_date', { ascending: false }),
-      supabase.from('impact_stories').select('*').order('created_at', { ascending: false }),
-      supabase.from('social_links').select('*').order('platform', { ascending: true }),
-      supabase.from('members').select('*').order('created_at', { ascending: false })
-    ]);
+    try {
+      const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles, team, events, impact, social, members] = await Promise.all([
+        supabase.from('donations').select('*').order('created_at', { ascending: false }),
+        supabase.from('scholarships').select('*').order('created_at', { ascending: false }),
+        supabase.from('partners').select('*').order('created_at', { ascending: false }),
+        supabase.from('volunteers').select('*').order('created_at', { ascending: false }),
+        supabase.from('news').select('*').order('created_at', { ascending: false }),
+        supabase.from('gallery').select('*').order('created_at', { ascending: false }),
+        supabase.from('testimonials').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*').order('email', { ascending: true }),
+        supabase.from('team').select('*').order('display_order', { ascending: true }),
+        supabase.from('events').select('*').order('event_date', { ascending: false }),
+        supabase.from('impact_stories').select('*').order('created_at', { ascending: false }),
+        supabase.from('social_links').select('*').order('platform', { ascending: true }),
+        supabase.from('members').select('*').order('created_at', { ascending: false })
+      ]);
 
-    setData({
-      donations: donations.data || [],
-      scholarships: scholarships.data || [],
-      partners: partners.data || [],
-      volunteers: volunteers.data || [],
-      news: news.data || [],
-      gallery: gallery.data || [],
-      testimonials: testimonials.data || [],
-      profiles: profiles.data || [],
-      team: team.data || [],
-      events: events.data || [],
-      impact: impact.data || [],
-      social: social.data || [],
-      members: members.data || []
-    });
+      setData({
+        donations: donations.data || [],
+        scholarships: scholarships.data || [],
+        partners: partners.data || [],
+        volunteers: volunteers.data || [],
+        news: news.data || [],
+        gallery: gallery.data || [],
+        testimonials: testimonials.data || [],
+        profiles: profiles.data || [],
+        team: team.data || [],
+        events: events.data || [],
+        impact: impact.data || [],
+        social: social.data || [],
+        members: members.data || []
+      });
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
     setLoading(false);
   };
 
@@ -91,10 +118,13 @@ export default function AdminDashboard() {
   };
 
   const deleteItem = async (table: string, id: string) => {
-    if (confirm('Are you sure you want to delete this item?')) {
+    if (confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
       const { error } = await supabase.from(table).delete().eq('id', id);
-      if (error) alert(`Error deleting: ${error.message}`);
-      fetchData();
+      if (error) {
+        alert(`Error deleting: ${error.message}`);
+      } else {
+        fetchData();
+      }
     }
   };
 
@@ -178,32 +208,51 @@ export default function AdminDashboard() {
     fetchData();
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="flex flex-col items-center">
+      <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
+      <p className="mt-4 text-navy font-bold animate-pulse uppercase tracking-[0.2em] text-xs">Loading Dashboard...</p>
+    </div>
+  </div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-navy p-4 flex justify-between items-center sticky top-0 z-[70]">
+        <div className="flex items-center space-x-2">
+          <img src="/assets/logo.png" alt="Logo" className="h-6 w-auto invert brightness-0" />
+          <span className="text-white font-bold text-sm tracking-tight">ADMIN</span>
+        </div>
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-white p-2">
+          {isSidebarOpen ? <X /> : <LayoutDashboard />}
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <div className="w-64 bg-navy text-white flex flex-col p-6 space-y-8">
-        <div className="flex items-center space-x-3 mb-4">
+      <div className={`
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        fixed md:relative inset-0 md:inset-auto z-[65] w-full md:w-64 bg-navy text-white flex flex-col p-6 space-y-8 transition-transform duration-300 ease-in-out
+      `}>
+        <div className="hidden md:flex items-center space-x-3 mb-4">
           <img src="/assets/logo.png" alt="Logo" className="h-8 w-auto invert brightness-0" />
           <span className="font-bold tracking-tight">ADMIN PANEL</span>
         </div>
 
         <nav className="flex-1 space-y-2 overflow-y-auto pr-2 pb-8 scrollbar-hide">
-          <NavItem active={activeView === 'overview'} onClick={() => setActiveView('overview')} icon={LayoutDashboard} label="Overview" />
-          <NavItem active={activeView === 'donations'} onClick={() => setActiveView('donations')} icon={Heart} label="Donations" />
-          <NavItem active={activeView === 'scholarships'} onClick={() => setActiveView('scholarships')} icon={GraduationCap} label="Scholarships" />
-          <NavItem active={activeView === 'partners'} onClick={() => setActiveView('partners')} icon={Handshake} label="Partners" />
-          <NavItem active={activeView === 'volunteers'} onClick={() => setActiveView('volunteers')} icon={UserPlus} label="Volunteers" />
-          <NavItem active={activeView === 'members'} onClick={() => setActiveView('members')} icon={Users2} label="Members" />
-          <NavItem active={activeView === 'news'} onClick={() => setActiveView('news')} icon={Newspaper} label="News & Blog" />
-          <NavItem active={activeView === 'team'} onClick={() => setActiveView('team')} icon={Users} label="Team" />
-          <NavItem active={activeView === 'events'} onClick={() => setActiveView('events')} icon={Calendar} label="Events" />
-          <NavItem active={activeView === 'impact'} onClick={() => setActiveView('impact')} icon={Star} label="Impact Stories" />
-          <NavItem active={activeView === 'gallery'} onClick={() => setActiveView('gallery')} icon={ImageIcon} label="Gallery" />
-          <NavItem active={activeView === 'social'} onClick={() => setActiveView('social')} icon={Share2} label="Social Links" />
-          <NavItem active={activeView === 'testimonials'} onClick={() => setActiveView('testimonials')} icon={MessageSquare} label="Testimonials" />
-          <NavItem active={activeView === 'admins'} onClick={() => setActiveView('admins')} icon={Users} label="Admin Users" />
+          <NavItem active={activeView === 'overview'} onClick={() => { setActiveView('overview'); setIsSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" />
+          <NavItem active={activeView === 'donations'} onClick={() => { setActiveView('donations'); setIsSidebarOpen(false); }} icon={Heart} label="Donations" />
+          <NavItem active={activeView === 'scholarships'} onClick={() => { setActiveView('scholarships'); setIsSidebarOpen(false); }} icon={GraduationCap} label="Scholarships" />
+          <NavItem active={activeView === 'partners'} onClick={() => { setActiveView('partners'); setIsSidebarOpen(false); }} icon={Handshake} label="Partners" />
+          <NavItem active={activeView === 'volunteers'} onClick={() => { setActiveView('volunteers'); setIsSidebarOpen(false); }} icon={UserPlus} label="Volunteers" />
+          <NavItem active={activeView === 'members'} onClick={() => { setActiveView('members'); setIsSidebarOpen(false); }} icon={Users2} label="Members" />
+          <NavItem active={activeView === 'news'} onClick={() => { setActiveView('news'); setIsSidebarOpen(false); }} icon={Newspaper} label="News & Blog" />
+          <NavItem active={activeView === 'team'} onClick={() => { setActiveView('team'); setIsSidebarOpen(false); }} icon={Users} label="Team" />
+          <NavItem active={activeView === 'events'} onClick={() => { setActiveView('events'); setIsSidebarOpen(false); }} icon={Calendar} label="Events" />
+          <NavItem active={activeView === 'impact'} onClick={() => { setActiveView('impact'); setIsSidebarOpen(false); }} icon={Star} label="Impact Stories" />
+          <NavItem active={activeView === 'gallery'} onClick={() => { setActiveView('gallery'); setIsSidebarOpen(false); }} icon={ImageIcon} label="Gallery" />
+          <NavItem active={activeView === 'social'} onClick={() => { setActiveView('social'); setIsSidebarOpen(false); }} icon={Share2} label="Social Links" />
+          <NavItem active={activeView === 'testimonials'} onClick={() => { setActiveView('testimonials'); setIsSidebarOpen(false); }} icon={MessageSquare} label="Testimonials" />
+          <NavItem active={activeView === 'admins'} onClick={() => { setActiveView('admins'); setIsSidebarOpen(false); }} icon={Users} label="Admin Users" />
         </nav>
 
         <button 
@@ -216,76 +265,96 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-8 overflow-y-auto">
-        <header className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-navy capitalize">{activeView.replace('-', ' ')}</h1>
-          {activeView === 'gallery' && (
-            <button onClick={addToGallery} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
-              <Plus className="h-4 w-4" /> <span>Add Photo</span>
+      <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-navy capitalize">{activeView.replace('-', ' ')}</h1>
+            <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Real-time Dashboard</p>
+          </div>
+          <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+            <button 
+              onClick={fetchData} 
+              className="px-4 py-2 rounded-xl text-gray-500 hover:text-navy hover:bg-gray-200 transition-colors flex items-center space-x-2 text-sm font-bold bg-gray-100"
+            >
+              <span>Refresh</span>
             </button>
-          )}
-          {activeView === 'news' && (
-            <button onClick={addNews} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
-              <Plus className="h-4 w-4" /> <span>Add Post</span>
-            </button>
-          )}
-          {activeView === 'team' && (
-            <button onClick={addTeamMember} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
-              <Plus className="h-4 w-4" /> <span>Add Member</span>
-            </button>
-          )}
-          {activeView === 'events' && (
-            <button onClick={addEvent} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
-              <Plus className="h-4 w-4" /> <span>Add Event</span>
-            </button>
-          )}
-          {activeView === 'impact' && (
-            <button onClick={addImpactStory} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
-              <Plus className="h-4 w-4" /> <span>Add Story</span>
-            </button>
-          )}
-          {activeView === 'social' && (
-            <button onClick={addSocialLink} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2">
-              <Plus className="h-4 w-4" /> <span>Add Link</span>
-            </button>
-          )}
+            {activeView === 'gallery' && (
+              <button onClick={addToGallery} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Photo</span>
+              </button>
+            )}
+            {activeView === 'news' && (
+              <button onClick={addNews} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Post</span>
+              </button>
+            )}
+            {activeView === 'team' && (
+              <button onClick={addTeamMember} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Member</span>
+              </button>
+            )}
+            {activeView === 'events' && (
+              <button onClick={addEvent} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Event</span>
+              </button>
+            )}
+            {activeView === 'impact' && (
+              <button onClick={addImpactStory} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Story</span>
+              </button>
+            )}
+            {activeView === 'social' && (
+              <button onClick={addSocialLink} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Link</span>
+              </button>
+            )}
+          </div>
         </header>
 
         {activeView === 'overview' && <OverviewStats data={data} />}
         
         {activeView === 'donations' && (
-          <Table headers={['Date', 'Amount', 'Status']}>
+          <Table headers={['Date', 'Amount', 'Status', 'Actions']}>
             {data.donations.map((d: any) => (
               <tr key={d.id} className="border-b">
                 <td className="p-4">{new Date(d.created_at).toLocaleDateString()}</td>
                 <td className="p-4 font-bold text-navy">${d.amount}</td>
                 <td className="p-4 uppercase text-xs font-bold text-gold">{d.payment_status}</td>
+                <td className="p-4">
+                  <button onClick={() => deleteItem('donations', d.id)} className="text-red-400 hover:text-red-500 transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </td>
               </tr>
             ))}
           </Table>
         )}
 
+        {/* ... (keep other views similar but ensures delete buttons are everywhere) */}
+
         {activeView === 'scholarships' && (
           <div className="space-y-4">
             {data.scholarships.map((s: any) => (
-              <div key={s.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div key={s.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
                 <div className="flex justify-between mb-4">
                   <h3 className="font-bold text-navy">{s.full_name}</h3>
-                  <span className="text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString()}</span>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(s.created_at).toLocaleDateString()}</span>
+                    <button onClick={() => deleteItem('scholarships', s.id)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                  <div><span className="text-gray-400">Level:</span> {s.education_level}</div>
-                  <div><span className="text-gray-400">Institution:</span> {s.institution}</div>
-                  <div><span className="text-gray-400">Email:</span> {s.email}</div>
-                  <div><span className="text-gray-400">Status:</span> <span className="text-gold font-bold uppercase text-[10px]">{s.status}</span></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
+                  <div><span className="text-gray-400 font-medium">Level:</span> {s.education_level}</div>
+                  <div><span className="text-gray-400 font-medium">Institution:</span> {s.institution}</div>
+                  <div><span className="text-gray-400 font-medium">Email:</span> {s.email}</div>
+                  <div><span className="text-gray-400 font-medium">Status:</span> <span className="text-gold font-bold uppercase text-[10px]">{s.status}</span></div>
                 </div>
                 <p className="text-gray-600 text-sm italic">"{s.reason}"</p>
-                <div className="mt-4 flex justify-between items-center">
-                   <div className="flex space-x-2">
-                     <button onClick={() => updateStatus('scholarships', s.id, 'approved')} className="bg-green-100 text-green-700 px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors">Approve</button>
-                     <button onClick={() => updateStatus('scholarships', s.id, 'denied')} className="bg-red-100 text-red-700 px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors">Deny</button>
-                   </div>
-                   <button onClick={() => deleteItem('scholarships', s.id)} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase transition-colors">Delete</button>
+                <div className="mt-4 flex flex-wrap gap-2">
+                   <button onClick={() => updateStatus('scholarships', s.id, 'approved')} className="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase hover:bg-green-200 transition-colors">Approve</button>
+                   <button onClick={() => updateStatus('scholarships', s.id, 'denied')} className="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase hover:bg-red-200 transition-colors">Deny</button>
                 </div>
               </div>
             ))}
@@ -295,19 +364,21 @@ export default function AdminDashboard() {
         {activeView === 'partners' && (
           <div className="space-y-4">
             {data.partners.map((p: any) => (
-              <div key={p.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div key={p.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
                 <div className="flex justify-between mb-4">
                   <h3 className="font-bold text-navy">{p.org_name}</h3>
-                  <span className="text-xs text-gray-400">{new Date(p.created_at).toLocaleDateString()}</span>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(p.created_at).toLocaleDateString()}</span>
+                    <button onClick={() => deleteItem('partners', p.id)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                  <div><span className="text-gray-400">Industry:</span> {p.industry}</div>
-                  <div><span className="text-gray-400">Email:</span> {p.email}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
+                  <div><span className="text-gray-400 font-medium">Industry:</span> {p.industry}</div>
+                  <div><span className="text-gray-400 font-medium">Email:</span> {p.email}</div>
                 </div>
-                <p className="text-gray-600 text-sm">{p.message}</p>
-                <div className="mt-4 flex justify-end space-x-2">
-                   <button onClick={() => deleteItem('partners', p.id)} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase transition-colors">Delete</button>
-                </div>
+                <p className="text-gray-600 text-sm leading-relaxed">{p.message}</p>
               </div>
             ))}
           </div>
@@ -485,14 +556,21 @@ export default function AdminDashboard() {
           <Table headers={['Email', 'Role', 'Actions']}>
             {data.profiles.map((p: any) => (
               <tr key={p.id} className="border-b">
-                <td className="p-4">{p.email}</td>
-                <td className="p-4 uppercase text-xs font-bold tracking-widest text-gold">{p.role}</td>
+                <td className="p-4 text-sm">{p.email}</td>
                 <td className="p-4">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${p.role === 'admin' ? 'bg-navy text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {p.role}
+                  </span>
+                </td>
+                <td className="p-4 flex items-center space-x-2">
                   {p.role !== 'admin' && (
-                    <button onClick={() => promoteAdmin(p.id)} className="bg-navy text-white px-3 py-1 rounded-lg text-xs font-bold">
-                      Promote to Admin
+                    <button onClick={() => promoteAdmin(p.id)} className="bg-gold text-navy px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight hover:scale-105 transition-transform">
+                      Promote
                     </button>
                   )}
+                  <button onClick={() => deleteItem('profiles', p.id)} className="text-red-400 hover:text-red-600 p-2 border border-red-100 rounded-lg transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </td>
               </tr>
             ))}

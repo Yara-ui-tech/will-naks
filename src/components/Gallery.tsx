@@ -9,6 +9,14 @@ export default function Gallery() {
 
   useEffect(() => {
     fetchGallery();
+    
+    const channel = supabase.channel('gallery-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchGallery = async () => {

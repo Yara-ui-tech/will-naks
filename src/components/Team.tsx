@@ -8,22 +8,31 @@ export default function Team() {
   const [team, setTeam] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchTeam = async () => {
-      const { data } = await supabase.from('team').select('*').order('display_order', { ascending: true });
-      if (data && data.length > 0) {
-        setTeam(data);
-      } else {
-        setTeam(TEAM.map((member, i) => ({
-          id: `static-${i}`,
-          name: member.name,
-          role: member.role,
-          image_url: member.image,
-          linkedin_url: (member as any).linkedin
-        })));
-      }
-    };
     fetchTeam();
+    
+    const channel = supabase.channel('team-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'team' }, fetchTeam)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const fetchTeam = async () => {
+    const { data } = await supabase.from('team').select('*').order('display_order', { ascending: true });
+    if (data && data.length > 0) {
+      setTeam(data);
+    } else {
+      setTeam(TEAM.map((member, i) => ({
+        id: `static-${i}`,
+        name: member.name,
+        role: member.role,
+        image_url: member.image,
+        linkedin_url: (member as any).linkedin
+      })));
+    }
+  };
 
   return (
     <div className="py-24 bg-cream">

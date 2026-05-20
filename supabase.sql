@@ -1,4 +1,31 @@
--- Supabase Schema for WILL-NAKS FOUNDATION
+-- Enable Realtime for all tables
+ALTER PUBLICATION supabase_realtime ADD TABLE contacts;
+ALTER PUBLICATION supabase_realtime ADD TABLE donations;
+ALTER PUBLICATION supabase_realtime ADD TABLE gallery;
+ALTER PUBLICATION supabase_realtime ADD TABLE testimonials;
+ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
+ALTER PUBLICATION supabase_realtime ADD TABLE scholarships;
+ALTER PUBLICATION supabase_realtime ADD TABLE partners;
+ALTER PUBLICATION supabase_realtime ADD TABLE volunteers;
+ALTER PUBLICATION supabase_realtime ADD TABLE news;
+ALTER PUBLICATION supabase_realtime ADD TABLE team;
+ALTER PUBLICATION supabase_realtime ADD TABLE events;
+ALTER PUBLICATION supabase_realtime ADD TABLE impact_stories;
+ALTER PUBLICATION supabase_realtime ADD TABLE members;
+ALTER PUBLICATION supabase_realtime ADD TABLE social_links;
+
+-- Function to check if user is admin (avoids circular RLS)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN (
+    EXISTS (
+      SELECT 1 FROM public.profiles 
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 1. Contacts Table
 CREATE TABLE IF NOT EXISTS contacts (
@@ -21,9 +48,7 @@ CREATE POLICY "Allow public insert contacts" ON contacts
 
 DROP POLICY IF EXISTS "Admins manage contacts" ON contacts;
 CREATE POLICY "Admins manage contacts" ON contacts
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR ALL USING (is_admin());
 
 -- 2. Donations Table
 CREATE TABLE IF NOT EXISTS donations (
@@ -43,9 +68,7 @@ CREATE POLICY "Allow public insert donations" ON donations
 
 DROP POLICY IF EXISTS "Admins manage donations" ON donations;
 CREATE POLICY "Admins manage donations" ON donations
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR ALL USING (is_admin());
 
 -- 3. Gallery Table
 CREATE TABLE IF NOT EXISTS gallery (
@@ -62,9 +85,7 @@ CREATE POLICY "Allow public view gallery" ON gallery FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Admins manage gallery" ON gallery;
 CREATE POLICY "Admins manage gallery" ON gallery
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR ALL USING (is_admin());
 
 -- 4. Testimonials Table
 CREATE TABLE IF NOT EXISTS testimonials (
@@ -88,9 +109,7 @@ CREATE POLICY "Allow public insert testimonials" ON testimonials
 
 DROP POLICY IF EXISTS "Admins manage testimonials" ON testimonials;
 CREATE POLICY "Admins manage testimonials" ON testimonials
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR ALL USING (is_admin());
 
 -- 5. Admin Users Table
 CREATE TABLE IF NOT EXISTS profiles (
@@ -113,9 +132,7 @@ CREATE POLICY "Users can update own profile" ON profiles
 
 DROP POLICY IF EXISTS "Admins manage profiles" ON profiles;
 CREATE POLICY "Admins manage profiles" ON profiles
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR ALL USING (is_admin());
 
 -- Function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -156,9 +173,7 @@ ALTER TABLE scholarships ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public insert scholarships" ON scholarships;
 CREATE POLICY "Public insert scholarships" ON scholarships FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage scholarships" ON scholarships;
-CREATE POLICY "Admins manage scholarships" ON scholarships FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage scholarships" ON scholarships FOR ALL USING (is_admin());
 
 -- 7. Partner Requests
 CREATE TABLE IF NOT EXISTS partners (
@@ -174,9 +189,7 @@ ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public insert partners" ON partners;
 CREATE POLICY "Public insert partners" ON partners FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage partners" ON partners;
-CREATE POLICY "Admins manage partners" ON partners FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage partners" ON partners FOR ALL USING (is_admin());
 
 -- 8. Volunteer Signups
 CREATE TABLE IF NOT EXISTS volunteers (
@@ -192,9 +205,7 @@ ALTER TABLE volunteers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public insert volunteers" ON volunteers;
 CREATE POLICY "Public insert volunteers" ON volunteers FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage volunteers" ON volunteers;
-CREATE POLICY "Admins manage volunteers" ON volunteers FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage volunteers" ON volunteers FOR ALL USING (is_admin());
 
 -- 9. News & Blog
 CREATE TABLE IF NOT EXISTS news (
@@ -211,9 +222,7 @@ ALTER TABLE news ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public view news" ON news;
 CREATE POLICY "Public view news" ON news FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Admins manage news" ON news;
-CREATE POLICY "Admins manage news" ON news FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage news" ON news FOR ALL USING (is_admin());
 
 -- 10. Team Table
 CREATE TABLE IF NOT EXISTS team (
@@ -230,9 +239,7 @@ ALTER TABLE team ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public view team" ON team;
 CREATE POLICY "Public view team" ON team FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Admins manage team" ON team;
-CREATE POLICY "Admins manage team" ON team FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage team" ON team FOR ALL USING (is_admin());
 
 -- 11. Events Table
 CREATE TABLE IF NOT EXISTS events (
@@ -250,9 +257,7 @@ ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public view events" ON events;
 CREATE POLICY "Public view events" ON events FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Admins manage events" ON events;
-CREATE POLICY "Admins manage events" ON events FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage events" ON events FOR ALL USING (is_admin());
 
 -- 12. Impact Stories Table
 CREATE TABLE IF NOT EXISTS impact_stories (
@@ -269,9 +274,7 @@ ALTER TABLE impact_stories ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public view impact_stories" ON impact_stories;
 CREATE POLICY "Public view impact_stories" ON impact_stories FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Admins manage impact_stories" ON impact_stories;
-CREATE POLICY "Admins manage impact_stories" ON impact_stories FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage impact_stories" ON impact_stories FOR ALL USING (is_admin());
 
 -- 13. Members Table
 CREATE TABLE IF NOT EXISTS members (
@@ -288,9 +291,7 @@ ALTER TABLE members ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public insert members" ON members;
 CREATE POLICY "Public insert members" ON members FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage members" ON members;
-CREATE POLICY "Admins manage members" ON members FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage members" ON members FOR ALL USING (is_admin());
 
 -- 14. Social Links Table
 CREATE TABLE IF NOT EXISTS social_links (
@@ -304,6 +305,5 @@ ALTER TABLE social_links ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public view social_links" ON social_links;
 CREATE POLICY "Public view social_links" ON social_links FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Admins manage social_links" ON social_links;
-CREATE POLICY "Admins manage social_links" ON social_links FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins manage social_links" ON social_links FOR ALL USING (is_admin());
+

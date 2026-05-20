@@ -7,25 +7,34 @@ export default function News() {
   const [posts, setPosts] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchNews = async () => {
-      const { data } = await supabase.from('news').select('*').order('created_at', { ascending: false });
-      if (data && data.length > 0) {
-        setPosts(data);
-      } else {
-        // Fallback
-        setPosts([
-          {
-            title: "Annual Student Leadership Summit 2024",
-            content: "Next month we are hosting our largest gathering of scholars and world-class industry mentors.",
-            category: "Events",
-            created_at: "2024-10-12T00:00:00",
-            image_url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800"
-          }
-        ]);
-      }
-    };
     fetchNews();
+
+    const channel = supabase.channel('news-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchNews)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const fetchNews = async () => {
+    const { data } = await supabase.from('news').select('*').order('created_at', { ascending: false });
+    if (data && data.length > 0) {
+      setPosts(data);
+    } else {
+      // Fallback
+      setPosts([
+        {
+          title: "Annual Student Leadership Summit 2024",
+          content: "Next month we are hosting our largest gathering of scholars and world-class industry mentors.",
+          category: "Events",
+          created_at: "2024-10-12T00:00:00",
+          image_url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800"
+        }
+      ]);
+    }
+  };
 
   return (
     <div className="pt-32 pb-24">

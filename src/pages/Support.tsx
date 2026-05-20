@@ -43,6 +43,14 @@ export default function Support() {
           reason: data.reason
         }]);
         if (error) throw error;
+      } else if (activeTab === 'donate') {
+        const { error } = await supabase.from('donations').insert([{
+          amount: parseFloat(data.amount as string) || 50,
+          donor_name: data.full_name,
+          email: data.email,
+          payment_status: 'pending'
+        }]);
+        if (error) throw error;
       }
       
       setSubmitted(true);
@@ -126,12 +134,16 @@ export default function Support() {
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
-                          <input required type="text" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" placeholder="John Doe" />
+                          <input required name="full_name" type="text" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" placeholder="John Doe" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-                          <input required type="email" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" placeholder="john@example.com" />
+                          <input required name="email" type="email" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" placeholder="john@example.com" />
                         </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Donation Amount ($)</label>
+                        <input required name="amount" type="number" defaultValue="50" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" />
                       </div>
                       <button 
                         type="submit" 
