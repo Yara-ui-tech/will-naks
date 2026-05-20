@@ -24,6 +24,7 @@ export default function About() {
             {/* Founders Card */}
             <div className="absolute -bottom-10 -right-10 z-20 bg-navy p-8 rounded-2xl shadow-xl max-w-xs text-white hidden md:block border border-gold/20">
               <p className="text-gold font-bold text-lg mb-2 serif">Founded by Willie Nakunyada</p>
+              <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-4">Led by CEOs Simbarashe O Manongwa & Tapiwanashe Mandiveyi</p>
               <p className="text-gray-400 text-sm italic">"Education is the most powerful weapon which you can use to change the world."</p>
             </div>
             {/* Decorative Grid */}
@@ -42,7 +43,7 @@ export default function About() {
             </h3>
             <div className="space-y-6 text-gray-700 text-lg leading-relaxed mb-10">
               <p>
-                Founded by <strong className="text-navy font-semibold">Willie Nakunyada</strong> and led by CEO <strong className="text-navy font-semibold">Simbarashe O Manongwa</strong>, WILL-NAKS FOUNDATION is dedicated to bridging the gap between talent and opportunity.
+                Founded by <strong className="text-navy font-semibold">Willie Nakunyada</strong> and led by CEOs <strong className="text-navy font-semibold">Simbarashe O Manongwa</strong> and <strong className="text-navy font-semibold">Tapiwanashe Mandiveyi</strong>, WILL-NAKS FOUNDATION is dedicated to bridging the gap between talent and opportunity.
               </p>
               <p>
                 We believe that every child, regardless of their background, deserves the chance to reach their full potential. Our foundation was born from a deep commitment to humanitarian service and a belief in the power of youth empowerment.

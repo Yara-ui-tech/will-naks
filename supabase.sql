@@ -126,7 +126,7 @@ BEGIN
     new.id, 
     new.email,
     CASE 
-      WHEN NOT EXISTS (SELECT 1 FROM public.profiles WHERE role = 'admin') THEN 'admin'
+      WHEN new.email IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com') THEN 'admin'
       ELSE 'user'
     END
   );

@@ -46,14 +46,14 @@ export default function About() {
               <h2 className="text-4xl font-serif font-bold text-navy mb-8">Our Journey</h2>
               <div className="space-y-6 text-gray-600 leading-relaxed">
                 <p>
-                  Founded with a vision to create a world where talent is never limited by financial
-                  circumstances, the WILL-NAKS Foundation began its work in 2020. Since then, we have
-                  transformed from a small community initiative into a pan-African support system.
+                  Founded by <strong>Willie Nakunyada</strong> and led by CEOs <strong>Simbarashe O Manongwa</strong> 
+                  and <strong>Tapiwanashe Mandiveyi</strong>, WILL-NAKS FOUNDATION is dedicated to 
+                  bridging the gap between talent and opportunity.
                 </p>
                 <p>
-                  We believe that education is the most powerful weapon which you can use to change 
-                  the world. Our programs are designed not just to pay fees, but to build leaders, 
-                  innovators, and change-makers.
+                  We believe that every child, regardless of their background, deserves the chance to 
+                  reach their full potential. Our foundation was born from a deep commitment to 
+                  humanitarian service and a belief in the power of youth empowerment.
                 </p>
               </div>
             </motion.div>

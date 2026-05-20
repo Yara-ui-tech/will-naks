@@ -50,19 +50,17 @@ export default function DynamicStats() {
       {stats.map((stat, index) => (
         <motion.div
           key={stat.label}
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: index * 0.1 }}
-          className="text-center group"
+          className="bg-white p-8 rounded-3xl border border-gold/10 shadow-lg text-center group hover:border-gold/30 transition-all duration-300"
         >
           <div className="relative inline-block">
-            <span className="text-4xl md:text-6xl font-serif font-bold text-navy group-hover:text-gold transition-colors duration-300 italic">
+            <span className="text-3xl md:text-5xl font-serif font-bold text-navy group-hover:text-gold transition-colors duration-300 italic">
               {stat.prefix}{stat.value.toLocaleString()}{stat.suffix}
             </span>
-            <div className="h-1 w-0 bg-gold group-hover:w-full transition-all duration-500 mt-1"></div>
           </div>
-          <p className="text-gold font-bold text-xs uppercase tracking-[0.2em] mt-4 font-sans">{stat.label}</p>
+          <p className="text-gray-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-4 font-sans line-clamp-1">{stat.label}</p>
         </motion.div>
       ))}
     </div>
