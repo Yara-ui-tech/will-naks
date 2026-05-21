@@ -307,3 +307,18 @@ CREATE POLICY "Public view social_links" ON social_links FOR SELECT USING (true)
 DROP POLICY IF EXISTS "Admins manage social_links" ON social_links;
 CREATE POLICY "Admins manage social_links" ON social_links FOR ALL USING (is_admin());
 
+-- 15. Storage Setup for Images
+-- Note: This requires the storage extension to be enabled (usually enabled by default in Supabase)
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('images', 'images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage Policies for 'images' bucket
+DROP POLICY IF EXISTS "Public View Images" ON storage.objects;
+CREATE POLICY "Public View Images" ON storage.objects
+  FOR SELECT USING (bucket_id = 'images');
+
+DROP POLICY IF EXISTS "Admins Manage Images" ON storage.objects;
+CREATE POLICY "Admins Manage Images" ON storage.objects
+  FOR ALL USING (bucket_id = 'images' AND is_admin());
+

@@ -143,22 +143,67 @@ export default function AdminDashboard() {
     }
   };
 
+  const uploadImage = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `uploads/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data } = supabase.storage
+      .from('images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
+    if (e.target.files && e.target.files[0]) {
+      try {
+        const url = await uploadImage(e.target.files[0]);
+        callback(url);
+      } catch (err: any) {
+        alert('Upload failed: ' + err.message);
+      }
+    }
+  };
+
   const addToGallery = async () => {
-    const url = prompt('Enter Image URL:');
-    const caption = prompt('Enter Caption:');
-    if (url) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => handleFileUpload(e as any, async (url) => {
+      const caption = prompt('Enter Caption:');
       const { error } = await supabase.from('gallery').insert([{ url, caption, category: 'Foundation' }]);
       if (error) alert(`Error adding to gallery: ${error.message}`);
       fetchData();
-    }
+    });
+    input.click();
   };
 
   const addNews = async () => {
     const title = prompt('News Title:');
     const content = prompt('News Content:');
-    const image_url = prompt('Image URL:');
-    if (title && content) {
-      const { error } = await supabase.from('news').insert([{ title, content, image_url, category: 'General' }]);
+    if (!title || !content) return;
+
+    if (confirm('Select an image for this post?')) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e) => handleFileUpload(e as any, async (image_url) => {
+        const { error } = await supabase.from('news').insert([{ title, content, image_url, category: 'General' }]);
+        if (error) alert(`Error adding news: ${error.message}`);
+        fetchData();
+      });
+      input.click();
+    } else {
+      const { error } = await supabase.from('news').insert([{ title, content, category: 'General' }]);
       if (error) alert(`Error adding news: ${error.message}`);
       fetchData();
     }
@@ -167,20 +212,37 @@ export default function AdminDashboard() {
   const addTeamMember = async () => {
     const name = prompt('Name:');
     const role = prompt('Role:');
-    const image_url = prompt('Image URL:');
-    const linkedin_url = prompt('LinkedIn URL:');
-    if (name && role) {
+    if (!name || !role) return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => handleFileUpload(e as any, async (image_url) => {
+      const linkedin_url = prompt('LinkedIn URL (optional):');
       const { error } = await supabase.from('team').insert([{ name, role, image_url, linkedin_url }]);
       if (error) alert(`Error adding team member: ${error.message}`);
       fetchData();
-    }
+    });
+    input.click();
   };
 
   const addEvent = async () => {
     const title = prompt('Event Title:');
     const date = prompt('Date (YYYY-MM-DD):');
     const location = prompt('Location:');
-    if (title && date) {
+    if (!title || !date) return;
+
+    if (confirm('Upload an event cover image?')) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e) => handleFileUpload(e as any, async (image_url) => {
+        const { error } = await supabase.from('events').insert([{ title, event_date: date, location, image_url }]);
+        if (error) alert(`Error adding event: ${error.message}`);
+        fetchData();
+      });
+      input.click();
+    } else {
       const { error } = await supabase.from('events').insert([{ title, event_date: date, location }]);
       if (error) alert(`Error adding event: ${error.message}`);
       fetchData();
@@ -192,11 +254,17 @@ export default function AdminDashboard() {
     const role = prompt('Current Role:');
     const content = prompt('The Story:');
     const year = prompt('Year:');
-    if (name && content) {
-      const { error } = await supabase.from('impact_stories').insert([{ name, role, content, year }]);
+    if (!name || !content) return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => handleFileUpload(e as any, async (image_url) => {
+      const { error } = await supabase.from('impact_stories').insert([{ name, role, content, year, image_url }]);
       if (error) alert(`Error adding story: ${error.message}`);
       fetchData();
-    }
+    });
+    input.click();
   };
 
   const addSocialLink = async () => {
