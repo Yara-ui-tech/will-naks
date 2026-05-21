@@ -21,7 +21,7 @@ import {
   Users2
 } from 'lucide-react';
 
-type View = 'overview' | 'donations' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members';
+type View = 'overview' | 'donations' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages';
 
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<View>('overview');
@@ -38,7 +38,8 @@ export default function AdminDashboard() {
     events: [],
     impact: [],
     social: [],
-    members: []
+    members: [],
+    messages: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -69,6 +70,7 @@ export default function AdminDashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_stories' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, fetchData)
       .subscribe();
 
     return () => {
@@ -79,7 +81,7 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles, team, events, impact, social, members] = await Promise.all([
+      const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles, team, events, impact, social, members, messages] = await Promise.all([
         supabase.from('donations').select('*').order('created_at', { ascending: false }),
         supabase.from('scholarships').select('*').order('created_at', { ascending: false }),
         supabase.from('partners').select('*').order('created_at', { ascending: false }),
@@ -92,7 +94,8 @@ export default function AdminDashboard() {
         supabase.from('events').select('*').order('event_date', { ascending: false }),
         supabase.from('impact_stories').select('*').order('created_at', { ascending: false }),
         supabase.from('social_links').select('*').order('platform', { ascending: true }),
-        supabase.from('members').select('*').order('created_at', { ascending: false })
+        supabase.from('members').select('*').order('created_at', { ascending: false }),
+        supabase.from('contacts').select('*').order('created_at', { ascending: false })
       ]);
 
       setData({
@@ -108,7 +111,8 @@ export default function AdminDashboard() {
         events: events.data || [],
         impact: impact.data || [],
         social: social.data || [],
-        members: members.data || []
+        members: members.data || [],
+        messages: messages.data || []
       });
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -327,6 +331,7 @@ export default function AdminDashboard() {
           <NavItem active={activeView === 'gallery'} onClick={() => { setActiveView('gallery'); setIsSidebarOpen(false); }} icon={ImageIcon} label="Gallery" />
           <NavItem active={activeView === 'social'} onClick={() => { setActiveView('social'); setIsSidebarOpen(false); }} icon={Share2} label="Social Links" />
           <NavItem active={activeView === 'testimonials'} onClick={() => { setActiveView('testimonials'); setIsSidebarOpen(false); }} icon={MessageSquare} label="Testimonials" />
+          <NavItem active={activeView === 'messages'} onClick={() => { setActiveView('messages'); setIsSidebarOpen(false); }} icon={MessageSquare} label="Inbox" />
           <NavItem active={activeView === 'admins'} onClick={() => { setActiveView('admins'); setIsSidebarOpen(false); }} icon={Users} label="Users & Admins" />
         </nav>
 
@@ -461,6 +466,18 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
                   <div><span className="text-gray-400 font-medium">Industry:</span> {p.industry}</div>
                   <div><span className="text-gray-400 font-medium">Email:</span> {p.email}</div>
+                  <div>
+                    <span className="text-gray-400 font-medium">Status:</span> 
+                    <select 
+                      value={p.status || 'pending'} 
+                      onChange={(e) => updateStatus('partners', p.id, e.target.value)}
+                      className="ml-2 bg-cream/50 rounded-lg px-2 py-1 outline-none text-xs font-bold uppercase text-navy"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="partnered">Partnered</option>
+                    </select>
+                  </div>
                 </div>
                 <p className="text-gray-600 text-sm leading-relaxed">{p.message}</p>
               </div>
@@ -660,6 +677,28 @@ export default function AdminDashboard() {
             ))}
           </Table>
         )}
+        {activeView === 'messages' && (
+          <div className="space-y-4">
+            {data.messages.map((m: any) => (
+              <div key={m.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
+                <div className="flex justify-between mb-4">
+                  <h3 className="font-bold text-navy">{m.first_name} {m.last_name}</h3>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(m.created_at).toLocaleDateString()}</span>
+                    <button onClick={() => deleteItem('contacts', m.id)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
+                  <div><span className="text-gray-400 font-medium">Email:</span> {m.email}</div>
+                  <div><span className="text-gray-400 font-medium">Subject:</span> {m.subject}</div>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed">{m.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -690,6 +729,7 @@ function OverviewStats({ data }: any) {
     { label: 'Recent News', value: data.news.length, icon: Newspaper, color: 'bg-indigo-50 text-indigo-600' },
     { label: 'Impact Stories', value: data.impact.length, icon: Star, color: 'bg-yellow-50 text-yellow-600' },
     { label: 'Gallery Photos', value: data.gallery.length, icon: ImageIcon, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Unread Messages', value: data.messages.length, icon: MessageSquare, color: 'bg-orange-50 text-orange-600' },
   ];
 
   return (

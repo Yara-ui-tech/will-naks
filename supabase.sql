@@ -1,18 +1,22 @@
--- Enable Realtime for all tables
-ALTER PUBLICATION supabase_realtime ADD TABLE contacts;
-ALTER PUBLICATION supabase_realtime ADD TABLE donations;
-ALTER PUBLICATION supabase_realtime ADD TABLE gallery;
-ALTER PUBLICATION supabase_realtime ADD TABLE testimonials;
-ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
-ALTER PUBLICATION supabase_realtime ADD TABLE scholarships;
-ALTER PUBLICATION supabase_realtime ADD TABLE partners;
-ALTER PUBLICATION supabase_realtime ADD TABLE volunteers;
-ALTER PUBLICATION supabase_realtime ADD TABLE news;
-ALTER PUBLICATION supabase_realtime ADD TABLE team;
-ALTER PUBLICATION supabase_realtime ADD TABLE events;
-ALTER PUBLICATION supabase_realtime ADD TABLE impact_stories;
-ALTER PUBLICATION supabase_realtime ADD TABLE members;
-ALTER PUBLICATION supabase_realtime ADD TABLE social_links;
+-- Enable Realtime for all tables safely
+DO $$ 
+DECLARE
+  table_list TEXT[] := ARRAY['contacts', 'donations', 'gallery', 'testimonials', 'profiles', 'scholarships', 'partners', 'volunteers', 'news', 'team', 'events', 'impact_stories', 'members', 'social_links'];
+  t TEXT;
+BEGIN
+  FOR t IN SELECT unnest(table_list) LOOP
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = t) THEN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND schemaname = 'public' 
+        AND tablename = t
+      ) THEN
+        EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE ' || quote_ident(t);
+      END IF;
+    END IF;
+  END LOOP;
+END $$;
 
 -- Function to check if user is admin (avoids circular RLS)
 CREATE OR REPLACE FUNCTION public.is_admin()
@@ -182,7 +186,8 @@ CREATE TABLE IF NOT EXISTS partners (
   org_name TEXT NOT NULL,
   industry TEXT NOT NULL,
   message TEXT NOT NULL,
-  email TEXT NOT NULL
+  email TEXT NOT NULL,
+  status TEXT DEFAULT 'pending'
 );
 
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
@@ -198,7 +203,8 @@ CREATE TABLE IF NOT EXISTS volunteers (
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   expertise TEXT NOT NULL,
-  availability TEXT NOT NULL
+  availability TEXT NOT NULL,
+  status TEXT DEFAULT 'pending'
 );
 
 ALTER TABLE volunteers ENABLE ROW LEVEL SECURITY;
