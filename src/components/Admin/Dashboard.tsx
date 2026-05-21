@@ -43,8 +43,15 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUser(user);
+      }
+    });
+
     fetchData();
 
     // Subscribe to all relevant tables for live updates
@@ -252,8 +259,19 @@ export default function AdminDashboard() {
           <NavItem active={activeView === 'gallery'} onClick={() => { setActiveView('gallery'); setIsSidebarOpen(false); }} icon={ImageIcon} label="Gallery" />
           <NavItem active={activeView === 'social'} onClick={() => { setActiveView('social'); setIsSidebarOpen(false); }} icon={Share2} label="Social Links" />
           <NavItem active={activeView === 'testimonials'} onClick={() => { setActiveView('testimonials'); setIsSidebarOpen(false); }} icon={MessageSquare} label="Testimonials" />
-          <NavItem active={activeView === 'admins'} onClick={() => { setActiveView('admins'); setIsSidebarOpen(false); }} icon={Users} label="Admin Users" />
+          <NavItem active={activeView === 'admins'} onClick={() => { setActiveView('admins'); setIsSidebarOpen(false); }} icon={Users} label="Users & Admins" />
         </nav>
+
+        {currentUser && (
+          <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10">
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Session</p>
+            <p className="text-xs truncate font-medium">{currentUser.email}</p>
+            <div className="flex items-center mt-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
+              <span className="text-[10px] text-gray-400 capitalize">Logged In</span>
+            </div>
+          </div>
+        )}
 
         <button 
           onClick={handleLogout}
@@ -329,8 +347,6 @@ export default function AdminDashboard() {
             ))}
           </Table>
         )}
-
-        {/* ... (keep other views similar but ensures delete buttons are everywhere) */}
 
         {activeView === 'scholarships' && (
           <div className="space-y-4">

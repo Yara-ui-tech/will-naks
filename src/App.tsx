@@ -53,7 +53,7 @@ export default function App() {
           .eq('id', session.user.id)
           .single();
 
-        if (!profile && session.user.email === 'goyaracorp@gmail.com') {
+        if (!profile && ['goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com'].includes(session.user.email)) {
           // Auto-create lead admin
           await supabase.from('profiles').insert([
             { id: session.user.id, email: session.user.email, role: 'admin' }
