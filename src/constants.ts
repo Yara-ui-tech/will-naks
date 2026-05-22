@@ -79,7 +79,7 @@ export const TEAM: TeamMember[] = [
     linkedin: 'https://linkedin.com/in/tapiwanashe-mandiveyi',
   },
   {
-    name: 'Vimbai Nakunyada',
+    name: 'Yvonne Kodzaimambo',
     role: 'Administrative and Logistics Officer',
     image: '/assets/team/coo.jpeg',
   },

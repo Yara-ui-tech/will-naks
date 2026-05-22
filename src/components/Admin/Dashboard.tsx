@@ -99,13 +99,23 @@ export default function AdminDashboard() {
       ]);
 
       let teamList = team.data || [];
+      const hasVimbai = teamList.some((t: any) => t.name === 'Vimbai Nakunyada');
+      if (hasVimbai) {
+        try {
+          await supabase.from('team').update({ name: 'Yvonne Kodzaimambo' }).eq('name', 'Vimbai Nakunyada');
+          teamList = teamList.map((t: any) => t.name === 'Vimbai Nakunyada' ? { ...t, name: 'Yvonne Kodzaimambo' } : t);
+        } catch (err) {
+          console.error("Failed to auto-rename Vimbai to Yvonne in DB:", err);
+        }
+      }
+
       if (teamList.length === 0) {
         try {
           const { data: seededTeam } = await supabase.from('team').insert([
             { name: 'Willie Nakunyada', role: 'Founder', image_url: '/assets/team/founder.avif', display_order: 0 },
             { name: 'Simbarashe O Manongwa', role: 'CEO', image_url: '/assets/team/simbarashe.jpg', linkedin_url: 'https://linkedin.com/in/simbarashe-manongwa-815b28342', display_order: 1 },
             { name: 'Tapiwanashe Mandiveyi', role: 'CEO', image_url: '/assets/team/tapiwanashe.jpg', linkedin_url: 'https://linkedin.com/in/tapiwanashe-mandiveyi', display_order: 2 },
-            { name: 'Vimbai Nakunyada', role: 'Administrative and Logistics Officer', image_url: '/assets/team/coo.jpeg', display_order: 3 }
+            { name: 'Yvonne Kodzaimambo', role: 'Administrative and Logistics Officer', image_url: '/assets/team/coo.jpeg', display_order: 3 }
           ]).select();
           if (seededTeam && seededTeam.length > 0) {
             teamList = seededTeam;
