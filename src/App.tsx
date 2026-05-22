@@ -43,28 +43,44 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const syncProfile = async (user: any) => {
+      if (!user) return;
+      try {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id);
+        const profile = profiles?.[0];
+
+        if (['goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com'].includes(user.email)) {
+          if (!profile) {
+            // Auto-create lead admin
+            await supabase.from('profiles').insert([
+              { id: user.id, email: user.email, role: 'admin' }
+            ]);
+          } else if (profile.role !== 'admin') {
+            // Auto-promote
+            await supabase.from('profiles').update({ role: 'admin' }).eq('id', user.id);
+          }
+        }
+      } catch (err) {
+        console.error('Error syncing profile:', err);
+      }
+    };
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        // Sync profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (!profile && ['goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com'].includes(session.user.email)) {
-          // Auto-create lead admin
-          await supabase.from('profiles').insert([
-            { id: session.user.id, email: session.user.email, role: 'admin' }
-          ]);
-        }
+        await syncProfile(session.user);
       }
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
+      if (session?.user) {
+        await syncProfile(session.user);
+      }
     });
 
     return () => subscription.unsubscribe();

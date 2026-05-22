@@ -78,6 +78,11 @@ export const TEAM: TeamMember[] = [
     image: '/assets/team/tapiwanashe.jpg',
     linkedin: 'https://linkedin.com/in/tapiwanashe-mandiveyi',
   },
+  {
+    name: 'Vimbai Nakunyada',
+    role: 'Administrative and Logistics Officer',
+    image: '/assets/team/coo.jpeg',
+  },
 ];
 
 export const PARTNERS: Partner[] = [];

@@ -130,13 +130,19 @@ DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
 CREATE POLICY "Public profiles are viewable by everyone" ON profiles
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Admins manage profiles" ON profiles;
 CREATE POLICY "Admins manage profiles" ON profiles
-  FOR ALL USING (is_admin());
+  FOR ALL USING (
+    (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
+  );
 
 -- Function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

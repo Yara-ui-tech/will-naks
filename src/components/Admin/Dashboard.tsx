@@ -98,6 +98,23 @@ export default function AdminDashboard() {
         supabase.from('contacts').select('*').order('created_at', { ascending: false })
       ]);
 
+      let teamList = team.data || [];
+      if (teamList.length === 0) {
+        try {
+          const { data: seededTeam } = await supabase.from('team').insert([
+            { name: 'Willie Nakunyada', role: 'Founder', image_url: '/assets/team/founder.avif', display_order: 0 },
+            { name: 'Simbarashe O Manongwa', role: 'CEO', image_url: '/assets/team/simbarashe.jpg', linkedin_url: 'https://linkedin.com/in/simbarashe-manongwa-815b28342', display_order: 1 },
+            { name: 'Tapiwanashe Mandiveyi', role: 'CEO', image_url: '/assets/team/tapiwanashe.jpg', linkedin_url: 'https://linkedin.com/in/tapiwanashe-mandiveyi', display_order: 2 },
+            { name: 'Vimbai Nakunyada', role: 'Administrative and Logistics Officer', image_url: '/assets/team/coo.jpeg', display_order: 3 }
+          ]).select();
+          if (seededTeam && seededTeam.length > 0) {
+            teamList = seededTeam;
+          }
+        } catch (seedErr) {
+          console.error('Failed to seed default team members:', seedErr);
+        }
+      }
+
       setData({
         donations: donations.data || [],
         scholarships: scholarships.data || [],
@@ -107,7 +124,7 @@ export default function AdminDashboard() {
         gallery: gallery.data || [],
         testimonials: testimonials.data || [],
         profiles: profiles.data || [],
-        team: team.data || [],
+        team: teamList,
         events: events.data || [],
         impact: impact.data || [],
         social: social.data || [],
