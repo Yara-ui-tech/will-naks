@@ -68,25 +68,43 @@ export default function App() {
       }
     };
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        await syncProfile(session.user);
-      }
-    }).catch((err) => {
-      console.warn('Supabase auth session fetch failed:', err);
-    }).finally(() => {
-      setLoading(false);
-    });
+    let subscription: any = null;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        await syncProfile(session.user);
-      }
-    });
+    const initAuth = async () => {
+      try {
+        if (!supabase || !supabase.auth) {
+          console.warn('Supabase auth services not configured.');
+          setLoading(false);
+          return;
+        }
 
-    return () => subscription.unsubscribe();
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        if (session?.user) {
+          await syncProfile(session.user);
+        }
+
+        const res = supabase.auth.onAuthStateChange(async (_event, session) => {
+          setSession(session);
+          if (session?.user) {
+            await syncProfile(session.user);
+          }
+        });
+        subscription = res?.data?.subscription;
+      } catch (err) {
+        console.warn('Supabase auth initialization skipped or failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   if (loading) return null;

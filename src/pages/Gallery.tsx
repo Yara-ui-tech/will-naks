@@ -12,8 +12,12 @@ export default function GalleryPage() {
   }, []);
 
   const fetchImages = async () => {
-    const { data } = await supabase.from('gallery').select('*').order('created_at', { ascending: false });
-    if (data) setImages(data);
+    try {
+      const { data } = await supabase.from('gallery').select('*').order('created_at', { ascending: false });
+      if (data) setImages(data);
+    } catch (err) {
+      console.warn('Failed to fetch gallery images:', err);
+    }
   };
 
   return (

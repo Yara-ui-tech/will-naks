@@ -20,18 +20,22 @@ export default function Team() {
   }, []);
 
   const fetchTeam = async () => {
-    const { data } = await supabase.from('team').select('*').order('display_order', { ascending: true });
-    if (data && data.length > 0) {
-      setTeam(data);
-    } else {
-      setTeam(TEAM.map((member, i) => ({
-        id: `static-${i}`,
-        name: member.name,
-        role: member.role,
-        image_url: member.image,
-        linkedin_url: (member as any).linkedin
-      })));
+    try {
+      const { data } = await supabase.from('team').select('*').order('display_order', { ascending: true });
+      if (data && data.length > 0) {
+        setTeam(data);
+        return;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch team data, utilizing fallback constants:', err);
     }
+    setTeam(TEAM.map((member, i) => ({
+      id: `static-${i}`,
+      name: member.name,
+      role: member.role,
+      image_url: member.image,
+      linkedin_url: (member as any).linkedin
+    })));
   };
 
   return (

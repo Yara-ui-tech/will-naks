@@ -20,12 +20,16 @@ export default function Gallery() {
   }, []);
 
   const fetchGallery = async () => {
-    const { data, error } = await supabase.from('gallery').select('url');
-    if (data && data.length > 0) {
-      setImages(data.map(item => item.url));
-    } else {
-      setImages(GALLERY);
+    try {
+      const { data } = await supabase.from('gallery').select('url');
+      if (data && data.length > 0) {
+        setImages(data.map(item => item.url));
+        return;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch gallery, falling back:', err);
     }
+    setImages(GALLERY);
     setLoading(false);
   };
 

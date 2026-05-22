@@ -8,8 +8,12 @@ export default function Footer() {
 
   useEffect(() => {
     const fetchSocials = async () => {
-      const { data } = await supabase.from('social_links').select('*').eq('is_active', true);
-      if (data) setSocials(data);
+      try {
+        const { data } = await supabase.from('social_links').select('*').eq('is_active', true);
+        if (data) setSocials(data);
+      } catch (err) {
+        console.warn('Failed to fetch social links, using standard defaults:', err);
+      }
     };
     fetchSocials();
   }, []);

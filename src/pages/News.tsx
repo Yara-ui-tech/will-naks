@@ -19,21 +19,25 @@ export default function News() {
   }, []);
 
   const fetchNews = async () => {
-    const { data } = await supabase.from('news').select('*').order('created_at', { ascending: false });
-    if (data && data.length > 0) {
-      setPosts(data);
-    } else {
-      // Fallback
-      setPosts([
-        {
-          title: "Annual Student Leadership Summit 2024",
-          content: "Next month we are hosting our largest gathering of scholars and world-class industry mentors.",
-          category: "Events",
-          created_at: "2024-10-12T00:00:00",
-          image_url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800"
-        }
-      ]);
+    try {
+      const { data } = await supabase.from('news').select('*').order('created_at', { ascending: false });
+      if (data && data.length > 0) {
+        setPosts(data);
+        return;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch news posts, using static fallback:', err);
     }
+    // Fallback
+    setPosts([
+      {
+        title: "Annual Student Leadership Summit 2024",
+        content: "Next month we are hosting our largest gathering of scholars and world-class industry mentors.",
+        category: "Events",
+        created_at: "2024-10-12T00:00:00",
+        image_url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800"
+      }
+    ]);
   };
 
   return (

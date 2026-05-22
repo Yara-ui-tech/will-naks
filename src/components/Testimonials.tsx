@@ -29,14 +29,20 @@ export default function Testimonials() {
   }, []);
 
   const fetchTestimonials = async () => {
-    const { data } = await supabase
-      .from('testimonials')
-      .select('*')
-      .eq('is_approved', true)
-      .order('created_at', { ascending: false });
-    
-    setTestimonials(data || []);
-    setLoading(false);
+    try {
+      const { data } = await supabase
+        .from('testimonials')
+        .select('*')
+        .eq('is_approved', true)
+        .order('created_at', { ascending: false });
+      
+      setTestimonials(data || []);
+    } catch (err) {
+      console.warn('Failed to fetch testimonials, safety fallback used:', err);
+      setTestimonials([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
