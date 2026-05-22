@@ -9,28 +9,18 @@ export default function Gallery() {
 
   useEffect(() => {
     fetchGallery();
-    
-    const channel = supabase.channel('gallery-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const fetchGallery = async () => {
     try {
       const { data } = await supabase.from('gallery').select('url');
-      if (data && data.length > 0) {
-        setImages(data.map(item => item.url));
-        return;
-      }
+      setImages(data ? data.map(item => item.url) : []);
     } catch (err) {
-      console.warn('Failed to fetch gallery, falling back:', err);
+      console.warn('Failed to fetch gallery from database:', err);
+      setImages([]);
+    } finally {
+      setLoading(false);
     }
-    setImages(GALLERY);
-    setLoading(false);
   };
 
   return (

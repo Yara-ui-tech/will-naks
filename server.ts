@@ -16,8 +16,12 @@ async function startServer() {
     res.status(200).json({ status: "ok" });
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  // Vite middleware for development (or as a fallback if the built files are missing)
+  const distPath = path.join(process.cwd(), "dist");
+  const hasBuild = fs.existsSync(path.join(distPath, "index.html"));
+  const isProd = process.env.NODE_ENV === "production" && hasBuild;
+
+  if (!isProd) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -43,7 +47,6 @@ async function startServer() {
     });
   } else {
     // Serve static files in production
-    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     
     // SPA fallback: send index.html for all non-file requests

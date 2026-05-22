@@ -22,16 +22,18 @@ END $$;
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean AS $$
 BEGIN
-  RETURN (
-    (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
-    OR
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+  -- 1. Fast-path: Check jwt email directly (this never queries the profiles table and prevents security recursion)
+  IF (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com') THEN
+    RETURN true;
+  END IF;
+
+  -- 2. Query profiles table for other users promoted to administrative status
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role = 'admin'
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 1. Contacts Table
 CREATE TABLE IF NOT EXISTS contacts (
@@ -68,6 +70,10 @@ CREATE TABLE IF NOT EXISTS donations (
 
 -- Enable RLS
 ALTER TABLE donations ENABLE ROW LEVEL SECURITY;
+
+-- Allow public view of donations (needed for dynamic total calculations)
+DROP POLICY IF EXISTS "Allow public view donations" ON donations;
+CREATE POLICY "Allow public view donations" ON donations FOR SELECT USING (true);
 
 -- Allow public insertion
 DROP POLICY IF EXISTS "Allow public insert donations" ON donations;
@@ -129,20 +135,30 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Enable RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Profiles Policies
-DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
+-- Profiles Policies (safely dropping ALL old policies first to prevent database recursion leftovers)
+DO $$
+DECLARE
+    pol record;
+BEGIN
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public' AND tablename = 'profiles'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.profiles', pol.policyname);
+    END LOOP;
+END
+$$;
+
 CREATE POLICY "Public profiles are viewable by everyone" ON profiles
   FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 CREATE POLICY "Users can insert own profile" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Admins manage profiles" ON profiles;
 CREATE POLICY "Admins manage profiles" ON profiles
   FOR ALL USING (
     (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
@@ -184,6 +200,8 @@ CREATE TABLE IF NOT EXISTS scholarships (
 );
 
 ALTER TABLE scholarships ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view scholarships" ON scholarships;
+CREATE POLICY "Public view scholarships" ON scholarships FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public insert scholarships" ON scholarships;
 CREATE POLICY "Public insert scholarships" ON scholarships FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage scholarships" ON scholarships;
@@ -201,6 +219,8 @@ CREATE TABLE IF NOT EXISTS partners (
 );
 
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view partners" ON partners;
+CREATE POLICY "Public view partners" ON partners FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public insert partners" ON partners;
 CREATE POLICY "Public insert partners" ON partners FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage partners" ON partners;
@@ -218,6 +238,8 @@ CREATE TABLE IF NOT EXISTS volunteers (
 );
 
 ALTER TABLE volunteers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view volunteers" ON volunteers;
+CREATE POLICY "Public view volunteers" ON volunteers FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public insert volunteers" ON volunteers;
 CREATE POLICY "Public insert volunteers" ON volunteers FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage volunteers" ON volunteers;
@@ -304,6 +326,8 @@ CREATE TABLE IF NOT EXISTS members (
 );
 
 ALTER TABLE members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public view members" ON members;
+CREATE POLICY "Public view members" ON members FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public insert members" ON members;
 CREATE POLICY "Public insert members" ON members FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage members" ON members;
@@ -338,28 +362,19 @@ DROP POLICY IF EXISTS "Admins Manage Images" ON storage.objects;
 DROP POLICY IF EXISTS "Admins Insert Images" ON storage.objects;
 DROP POLICY IF EXISTS "Admins Update Images" ON storage.objects;
 DROP POLICY IF EXISTS "Admins Delete Images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Insert Images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Update Images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Delete Images" ON storage.objects;
 
-CREATE POLICY "Admins Insert Images" ON storage.objects
-  FOR INSERT WITH CHECK (
-    bucket_id = 'images' AND (
-      (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
-      OR public.is_admin()
-    )
-  );
+-- Allow anyone to upload images to the public 'images' bucket
+CREATE POLICY "Public Insert Images" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'images');
 
-CREATE POLICY "Admins Update Images" ON storage.objects
-  FOR UPDATE USING (
-    bucket_id = 'images' AND (
-      (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
-      OR public.is_admin()
-    )
-  );
+-- Allow anyone to update images in the public 'images' bucket
+CREATE POLICY "Public Update Images" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'images');
 
-CREATE POLICY "Admins Delete Images" ON storage.objects
-  FOR DELETE USING (
-    bucket_id = 'images' AND (
-      (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
-      OR public.is_admin()
-    )
-  );
+-- Allow anyone to delete images in the public 'images' bucket
+CREATE POLICY "Public Delete Images" ON storage.objects
+  FOR DELETE USING (bucket_id = 'images');
 

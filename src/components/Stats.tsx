@@ -4,24 +4,14 @@ import { supabase } from '../lib/supabase';
 
 export default function DynamicStats() {
   const [stats, setStats] = useState([
-    { label: 'Students Assisted', value: 0, suffix: '+' },
-    { label: 'Scholarships Awarded', value: 0, suffix: '+' },
+    { label: 'Foundation Members', value: 0, suffix: '' },
+    { label: 'Scholarships Awarded', value: 0, suffix: '' },
     { label: 'Total Support', value: 0, prefix: '$' },
-    { label: 'Active Volunteers', value: 0, suffix: '+' },
+    { label: 'Active Volunteers', value: 0, suffix: '' },
   ]);
 
   useEffect(() => {
     fetchStats();
-    
-    // Subscribe to changes for live updates
-    const updates = supabase.channel('stats-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, fetchStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scholarships' }, fetchStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'volunteers' }, fetchStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchStats)
-      .subscribe();
-
-    return () => { supabase.removeChannel(updates); };
   }, []);
 
   const fetchStats = async () => {
@@ -39,18 +29,18 @@ export default function DynamicStats() {
       const memberCount = members.data?.length || 0;
 
       setStats([
-        { label: 'Foundation Members', value: (memberCount || 0) + 45, suffix: '+' },
-        { label: 'Scholarships Awarded', value: scholarshipCount || 12, suffix: '' },
-        { label: 'Total Support', value: totalDonations || 1250, prefix: '$' },
-        { label: 'Active Volunteers', value: volunteerCount || 8, suffix: '' },
+        { label: 'Foundation Members', value: memberCount, suffix: '' },
+        { label: 'Scholarships Awarded', value: scholarshipCount, suffix: '' },
+        { label: 'Total Support', value: totalDonations, prefix: '$' },
+        { label: 'Active Volunteers', value: volunteerCount, suffix: '' },
       ]);
     } catch (err) {
-      console.warn('Failed to fetch statistics, using static fallbacks:', err);
+      console.warn('Failed to fetch statistics, showing true state:', err);
       setStats([
-        { label: 'Foundation Members', value: 45, suffix: '+' },
-        { label: 'Scholarships Awarded', value: 12, suffix: '' },
-        { label: 'Total Support', value: 1250, prefix: '$' },
-        { label: 'Active Volunteers', value: 8, suffix: '' },
+        { label: 'Foundation Members', value: 0, suffix: '' },
+        { label: 'Scholarships Awarded', value: 0, suffix: '' },
+        { label: 'Total Support', value: 0, prefix: '$' },
+        { label: 'Active Volunteers', value: 0, suffix: '' },
       ]);
     }
   };

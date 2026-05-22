@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Heart, 
@@ -18,7 +19,8 @@ import {
   Calendar,
   Star,
   Share2,
-  Users2
+  Users2,
+  ArrowLeft
 } from 'lucide-react';
 
 type View = 'overview' | 'donations' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages';
@@ -45,6 +47,7 @@ export default function AdminDashboard() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [fetchErrors, setFetchErrors] = useState<string[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -54,32 +57,10 @@ export default function AdminDashboard() {
     });
 
     fetchData();
-
-    // Subscribe to all relevant tables for live updates
-    const channel = supabase.channel('dashboard-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scholarships' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'partners' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'volunteers' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'testimonials' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'team' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_stories' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, fetchData)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles, team, events, impact, social, members, messages] = await Promise.all([
         supabase.from('donations').select('*').order('created_at', { ascending: false }),
@@ -125,6 +106,22 @@ export default function AdminDashboard() {
         }
       }
 
+      const errors: string[] = [];
+      if (donations.error) errors.push(`Donations: ${donations.error.message}`);
+      if (scholarships.error) errors.push(`Scholarships: ${scholarships.error.message}`);
+      if (partners.error) errors.push(`Partners: ${partners.error.message}`);
+      if (volunteers.error) errors.push(`Volunteers: ${volunteers.error.message}`);
+      if (news.error) errors.push(`News: ${news.error.message}`);
+      if (gallery.error) errors.push(`Gallery: ${gallery.error.message}`);
+      if (testimonials.error) errors.push(`Testimonials: ${testimonials.error.message}`);
+      if (profiles.error) errors.push(`Profiles: ${profiles.error.message}`);
+      if (events.error) errors.push(`Events: ${events.error.message}`);
+      if (impact.error) errors.push(`Impact Stories: ${impact.error.message}`);
+      if (social.error) errors.push(`Social Links: ${social.error.message}`);
+      if (members.error) errors.push(`Members: ${members.error.message}`);
+      if (messages.error) errors.push(`Inbox Messages (contacts): ${messages.error.message}`);
+      setFetchErrors(errors);
+
       setData({
         donations: donations.data || [],
         scholarships: scholarships.data || [],
@@ -141,8 +138,9 @@ export default function AdminDashboard() {
         members: members.data || [],
         messages: messages.data || []
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching data:', err);
+      setFetchErrors([err?.message || String(err)]);
     }
     setLoading(false);
   };
@@ -152,7 +150,7 @@ export default function AdminDashboard() {
   const toggleApproval = async (id: string, current: boolean) => {
     const { error } = await supabase.from('testimonials').update({ is_approved: !current }).eq('id', id);
     if (error) alert(`Error updating: ${error.message}`);
-    fetchData();
+    fetchData(true);
   };
 
   const deleteItem = async (table: string, id: string) => {
@@ -161,7 +159,7 @@ export default function AdminDashboard() {
       if (error) {
         alert(`Error deleting: ${error.message}`);
       } else {
-        fetchData();
+        fetchData(true);
       }
     }
   };
@@ -170,7 +168,7 @@ export default function AdminDashboard() {
     if (confirm('Promote this user to Admin?')) {
       const { error } = await supabase.from('profiles').update({ role: 'admin' }).eq('id', id);
       if (error) alert(`Error promoting: ${error.message}`);
-      fetchData();
+      fetchData(true);
     }
   };
 
@@ -213,7 +211,7 @@ export default function AdminDashboard() {
       const caption = prompt('Enter Caption:');
       const { error } = await supabase.from('gallery').insert([{ url, caption, category: 'Foundation' }]);
       if (error) alert(`Error adding to gallery: ${error.message}`);
-      fetchData();
+      fetchData(true);
     });
     input.click();
   };
@@ -230,13 +228,13 @@ export default function AdminDashboard() {
       input.onchange = (e) => handleFileUpload(e as any, async (image_url) => {
         const { error } = await supabase.from('news').insert([{ title, content, image_url, category: 'General' }]);
         if (error) alert(`Error adding news: ${error.message}`);
-        fetchData();
+        fetchData(true);
       });
       input.click();
     } else {
       const { error } = await supabase.from('news').insert([{ title, content, category: 'General' }]);
       if (error) alert(`Error adding news: ${error.message}`);
-      fetchData();
+      fetchData(true);
     }
   };
 
@@ -252,7 +250,7 @@ export default function AdminDashboard() {
       const linkedin_url = prompt('LinkedIn URL (optional):');
       const { error } = await supabase.from('team').insert([{ name, role, image_url, linkedin_url }]);
       if (error) alert(`Error adding team member: ${error.message}`);
-      fetchData();
+      fetchData(true);
     });
     input.click();
   };
@@ -271,13 +269,13 @@ export default function AdminDashboard() {
       input.onchange = (e) => handleFileUpload(e as any, async (image_url) => {
         const { error } = await supabase.from('events').insert([{ title, event_date: date, location, description, image_url }]);
         if (error) alert(`Error adding event: ${error.message}`);
-        fetchData();
+        fetchData(true);
       });
       input.click();
     } else {
       const { error } = await supabase.from('events').insert([{ title, event_date: date, location, description }]);
       if (error) alert(`Error adding event: ${error.message}`);
-      fetchData();
+      fetchData(true);
     }
   };
 
@@ -294,7 +292,7 @@ export default function AdminDashboard() {
     input.onchange = (e) => handleFileUpload(e as any, async (image_url) => {
       const { error } = await supabase.from('impact_stories').insert([{ name, role, content, year, image_url }]);
       if (error) alert(`Error adding story: ${error.message}`);
-      fetchData();
+      fetchData(true);
     });
     input.click();
   };
@@ -305,20 +303,20 @@ export default function AdminDashboard() {
     if (platform && url) {
       const { error } = await supabase.from('social_links').insert([{ platform, url }]);
       if (error) alert(`Error adding link: ${error.message}`);
-      fetchData();
+      fetchData(true);
     }
   };
 
   const toggleSocialActive = async (id: string, current: boolean) => {
     const { error } = await supabase.from('social_links').update({ is_active: !current }).eq('id', id);
     if (error) alert(`Error updating link: ${error.message}`);
-    fetchData();
+    fetchData(true);
   };
 
   const updateStatus = async (table: string, id: string, status: string) => {
     const { error } = await supabase.from(table).update({ status }).eq('id', id);
     if (error) alert(`Error updating status: ${error.message}`);
-    fetchData();
+    fetchData(true);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -336,20 +334,34 @@ export default function AdminDashboard() {
           <img src="/assets/logo.png" alt="Logo" className="h-6 w-auto invert brightness-0" />
           <span className="text-white font-bold text-sm tracking-tight">ADMIN</span>
         </div>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-white p-2">
-          {isSidebarOpen ? <X /> : <LayoutDashboard />}
-        </button>
+        <div className="flex items-center space-x-3">
+          <Link to="/" className="text-gold hover:text-white font-bold text-xs flex items-center space-x-1.5 py-1 px-2.5 rounded-lg border border-gold/20 bg-white/5 transition-colors">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Site</span>
+          </Link>
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-white p-2">
+            {isSidebarOpen ? <X /> : <LayoutDashboard />}
+          </button>
+        </div>
       </div>
 
       {/* Sidebar */}
       <div className={`
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        fixed md:relative inset-0 md:inset-auto z-[65] w-full md:w-64 bg-navy text-white flex flex-col p-6 space-y-8 transition-transform duration-300 ease-in-out
+        fixed md:relative inset-0 md:inset-auto z-[65] w-full md:w-64 bg-navy text-white flex flex-col p-6 space-y-6 transition-transform duration-300 ease-in-out
       `}>
-        <div className="hidden md:flex items-center space-x-3 mb-4">
+        <div className="hidden md:flex items-center space-x-3 mb-2">
           <img src="/assets/logo.png" alt="Logo" className="h-8 w-auto invert brightness-0" />
           <span className="font-bold tracking-tight">ADMIN PANEL</span>
         </div>
+
+        <Link 
+          to="/" 
+          className="flex items-center space-x-3 text-gold hover:text-white transition-colors p-3 rounded-xl bg-white/5 border border-gold/20 hover:bg-gold hover:text-navy text-xs font-bold uppercase tracking-wider"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Return to Site</span>
+        </Link>
 
         <nav className="flex-1 space-y-2 overflow-y-auto pr-2 pb-8 scrollbar-hide">
           <NavItem active={activeView === 'overview'} onClick={() => { setActiveView('overview'); setIsSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" />
@@ -397,6 +409,13 @@ export default function AdminDashboard() {
             <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Real-time Dashboard</p>
           </div>
           <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+            <Link 
+              to="/" 
+              className="px-4 py-2 rounded-xl text-navy hover:text-white hover:bg-navy/90 border border-navy/10 transition-all flex items-center space-x-2 text-sm font-bold bg-white shadow-sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Return to Website</span>
+            </Link>
             <button 
               onClick={fetchData} 
               className="px-4 py-2 rounded-xl text-gray-500 hover:text-navy hover:bg-gray-200 transition-colors flex items-center space-x-2 text-sm font-bold bg-gray-100"
@@ -435,6 +454,72 @@ export default function AdminDashboard() {
             )}
           </div>
         </header>
+
+        {fetchErrors.length > 0 && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm">
+            <h4 className="font-bold mb-1 flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+              <span>Certain database tables couldn't be loaded:</span>
+            </h4>
+            <ul className="list-disc pl-5 text-xs text-red-600 font-mono space-y-0.5">
+              {fetchErrors.map((err, i) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+            <p className="text-[10px] text-gray-500 mt-2">
+              This can happen if tables have Row Level Security (RLS) policies requiring Admin status, or if tables are not fully initialized yet in Supabase.
+            </p>
+
+            {fetchErrors.some(err => err.toLowerCase().includes('recursion')) && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs text-left">
+                <p className="font-bold mb-2 flex items-center gap-1.5">
+                  <span className="text-sm">💡</span>
+                  <span>How to fix the "infinite recursion" error in Supabase:</span>
+                </p>
+                <p className="mb-3 leading-relaxed text-gray-700">
+                  This occurs because lingering or historical row-level security (RLS) policies on your Supabase <strong>profiles</strong> table are causing a circular request loop. Copy and run this SQL script in your Supabase <strong>SQL Editor</strong> dashboard to fix it instantly:
+                </p>
+                <pre className="p-3 bg-white border border-amber-200 rounded-lg text-[10px] font-mono text-gray-800 overflow-x-auto select-all max-h-48 scrollbar-thin whitespace-pre leading-normal">
+{`-- 1. Redefine is_admin with a fast-track email check to prevent circular paths
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+BEGIN
+  IF (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com') THEN
+    RETURN true;
+  END IF;
+
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 2. Purge old recursive policies and set up clean ones
+DO $$
+DECLARE pol record;
+BEGIN
+  FOR pol IN 
+    SELECT policyname FROM pg_policies WHERE schemaname = 'public' AND tablename = 'profiles'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.profiles', pol.policyname);
+  END LOOP;
+END $$;
+
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
+  (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
+);`}
+                </pre>
+                <p className="mt-2 text-[10px] text-gray-500 font-medium leading-relaxed">
+                  Click inside the grey box to highlight all, then copy, paste into the Supabase SQL Editor console, and click "Run".
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {activeView === 'overview' && <OverviewStats data={data} />}
         
@@ -777,24 +862,39 @@ export default function AdminDashboard() {
         )}
         {activeView === 'messages' && (
           <div className="space-y-4">
-            {data.messages.map((m: any) => (
-              <div key={m.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
-                <div className="flex justify-between mb-4">
-                  <h3 className="font-bold text-navy">{m.first_name} {m.last_name}</h3>
-                  <div className="flex items-center space-x-3">
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(m.created_at).toLocaleDateString()}</span>
-                    <button onClick={() => deleteItem('contacts', m.id)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+            {data.messages.length === 0 ? (
+              <div className="bg-white rounded-[2rem] p-12 text-center border border-gray-100 max-w-xl mx-auto shadow-sm">
+                <div className="w-16 h-16 bg-navy/5 rounded-full flex items-center justify-center mx-auto mb-4 text-navy">
+                  <MessageSquare className="h-8 w-8 text-navy/40" />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
-                  <div><span className="text-gray-400 font-medium">Email:</span> {m.email}</div>
-                  <div><span className="text-gray-400 font-medium">Subject:</span> {m.subject}</div>
+                <h3 className="text-lg font-bold text-navy mb-2">Inbox is Empty</h3>
+                <p className="text-gray-500 text-sm leading-relaxed mb-4">
+                  No messages have been submitted through the contact form yet. Message submissions will appear here instantly.
+                </p>
+                <div className="text-[11px] bg-gold/5 border border-gold/10 text-gold/80 px-4 py-2 rounded-xl inline-block font-bold uppercase tracking-wider">
+                  Ready for inbound messages
                 </div>
-                <p className="text-gray-600 text-sm leading-relaxed">{m.message}</p>
               </div>
-            ))}
+            ) : (
+              data.messages.map((m: any) => (
+                <div key={m.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
+                  <div className="flex justify-between mb-4">
+                    <h3 className="font-bold text-navy">{m.first_name} {m.last_name}</h3>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(m.created_at).toLocaleDateString()}</span>
+                      <button onClick={() => deleteItem('contacts', m.id)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
+                    <div><span className="text-gray-400 font-medium">Email:</span> {m.email}</div>
+                    <div><span className="text-gray-400 font-medium">Subject:</span> {m.subject}</div>
+                  </div>
+                  <p className="text-gray-600 text-sm leading-relaxed">{m.message}</p>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
@@ -817,8 +917,10 @@ function NavItem({ active, onClick, icon: Icon, label }: any) {
 }
 
 function OverviewStats({ data }: any) {
+  const [showPolicies, setShowPolicies] = useState(false);
+
   const stats = [
-    { label: 'Total Donations', value: `$${data.donations.reduce((acc: number, d: any) => acc + d.amount, 0)}`, icon: Heart, color: 'bg-red-50 text-red-600' },
+    { label: 'Total Donations', value: `$${data.donations.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0)}`, icon: Heart, color: 'bg-red-50 text-red-600' },
     { label: 'Scholarship Apps', value: data.scholarships.length, icon: GraduationCap, color: 'bg-blue-50 text-blue-600' },
     { label: 'Total Members', value: data.members.length, icon: Users2, color: 'bg-gold/10 text-gold' },
     { label: 'Upcoming Events', value: data.events.length, icon: Calendar, color: 'bg-navy/10 text-navy' },
@@ -831,16 +933,89 @@ function OverviewStats({ data }: any) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {stats.map((stat, i) => (
-        <div key={i} className="bg-white p-6 rounded-[1.5rem] shadow-sm border border-gray-100 ring-1 ring-gold/5">
-          <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
-            <stat.icon className="h-6 w-6" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-white p-6 rounded-[1.5rem] shadow-sm border border-gray-100 ring-1 ring-gold/5">
+            <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
+              <stat.icon className="h-6 w-6" />
+            </div>
+            <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
+            <p className="text-2xl font-bold text-navy mt-1">{stat.value}</p>
           </div>
-          <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
-          <p className="text-2xl font-bold text-navy mt-1">{stat.value}</p>
+        ))}
+      </div>
+
+      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm ring-1 ring-gold/5">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-navy flex items-center gap-2">
+              <span className="text-xl">📷</span>
+              <span>Supabase Storage Policy Manager</span>
+            </h3>
+            <p className="text-gray-500 text-sm mt-1 leading-relaxed">
+              Ensure you can upload profiles, events, stories, and gallery images seamlessly. Click below to view the latest, most permissive upload policies.
+            </p>
+          </div>
+          <button 
+            onClick={() => setShowPolicies(!showPolicies)} 
+            className="px-5 py-2.5 bg-navy text-white hover:bg-navy/90 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm shrink-0"
+          >
+            {showPolicies ? 'Hide SQL Code' : 'Show SQL Setup Code'}
+          </button>
         </div>
-      ))}
+
+        {showPolicies && (
+          <div className="mt-6 border-t border-gray-100 pt-6">
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-950 text-xs text-left mb-4">
+              <p className="font-bold flex items-center gap-1.5 mb-1.5 text-amber-900">
+                <span>⚡</span> Quick Instructions:
+              </p>
+              <ol className="list-decimal pl-5 space-y-1 text-gray-700 leading-normal">
+                <li>Go to your <strong className="text-navy">Supabase Dashboard</strong>.</li>
+                <li>Click on <strong className="text-navy">SQL Editor</strong> on the left-side panel.</li>
+                <li>Paste the script below into the query window.</li>
+                <li>Click the <strong className="text-navy">Run</strong> button to execute.</li>
+              </ol>
+            </div>
+
+            <pre className="p-4 bg-gray-900 text-gray-100 border border-gray-800 rounded-2xl text-[11px] font-mono overflow-x-auto select-all max-h-80 scrollbar-thin whitespace-pre leading-normal">
+{`-- 1. Create 'images' bucket if not exists
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('images', 'images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Purge old image storage policies to prevent duplicates
+DROP POLICY IF EXISTS "Public View Images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins Manage Images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins Insert Images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins Update Images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins Delete Images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Insert Images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Update Images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Delete Images" ON storage.objects;
+
+-- 3. Setup clean fully-permissive policies for images bucket
+CREATE POLICY "Public View Images" ON storage.objects
+  FOR SELECT USING (bucket_id = 'images');
+
+CREATE POLICY "Public Insert Images" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'images');
+
+CREATE POLICY "Public Update Images" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'images');
+
+CREATE POLICY "Public Delete Images" ON storage.objects
+  FOR DELETE USING (bucket_id = 'images');`}
+            </pre>
+
+            <div className="mt-3 flex items-center gap-2 text-[10px] text-green-600 font-semibold uppercase tracking-wider">
+              <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
+              <span>Fully compatible with standard media uploads</span>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

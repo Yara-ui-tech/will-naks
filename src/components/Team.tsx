@@ -9,33 +9,16 @@ export default function Team() {
 
   useEffect(() => {
     fetchTeam();
-    
-    const channel = supabase.channel('team-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'team' }, fetchTeam)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const fetchTeam = async () => {
     try {
       const { data } = await supabase.from('team').select('*').order('display_order', { ascending: true });
-      if (data && data.length > 0) {
-        setTeam(data);
-        return;
-      }
+      setTeam(data || []);
     } catch (err) {
-      console.warn('Failed to fetch team data, utilizing fallback constants:', err);
+      console.warn('Failed to fetch team data from Supabase:', err);
+      setTeam([]);
     }
-    setTeam(TEAM.map((member, i) => ({
-      id: `static-${i}`,
-      name: member.name,
-      role: member.role,
-      image_url: member.image,
-      linkedin_url: (member as any).linkedin
-    })));
   };
 
   return (

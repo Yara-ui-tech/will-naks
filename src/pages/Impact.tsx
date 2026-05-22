@@ -8,27 +8,12 @@ export default function Impact() {
 
   useEffect(() => {
     const fetchStories = async () => {
-      const { data } = await supabase.from('impact_stories').select('*').order('created_at', { ascending: false });
-      if (data && data.length > 0) {
-        setStories(data);
-      } else {
-        // Fallback for demo
-        setStories([
-          {
-            name: "Tinashe's Journey",
-            role: "Engineering Student",
-            image_url: "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?auto=format&fit=crop&q=80&w=800",
-            content: "The scholarship didn't just pay for my books; it gave me the confidence to dream beyond my village. Today, I am internship with a top firm, building the infrastructure of tomorrow.",
-            year: "Class of 2023"
-          },
-          {
-            name: "Aamina's Vision",
-            role: "Medical Resident",
-            image_url: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=800",
-            content: "When I thought I had to drop out, WILL-NAKS stepped in. Their mentor supported me through my hardest exams. Now I am a doctor serving the same community that raised me.",
-            year: "Class of 2022"
-          }
-        ]);
+      try {
+        const { data } = await supabase.from('impact_stories').select('*').order('created_at', { ascending: false });
+        setStories(data || []);
+      } catch (err) {
+        console.warn('Failed to fetch impact stories from database:', err);
+        setStories([]);
       }
     };
     fetchStories();
