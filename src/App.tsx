@@ -73,6 +73,9 @@ export default function App() {
       if (session?.user) {
         await syncProfile(session.user);
       }
+    }).catch((err) => {
+      console.warn('Supabase auth session fetch failed:', err);
+    }).finally(() => {
       setLoading(false);
     });
 

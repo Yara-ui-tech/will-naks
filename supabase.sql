@@ -23,6 +23,8 @@ CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean AS $$
 BEGIN
   RETURN (
+    (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
+    OR
     EXISTS (
       SELECT 1 FROM public.profiles 
       WHERE id = auth.uid() AND role = 'admin'
@@ -59,6 +61,8 @@ CREATE TABLE IF NOT EXISTS donations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   amount NUMERIC NOT NULL,
+  donor_name TEXT,
+  email TEXT,
   payment_status TEXT DEFAULT 'pending'
 );
 
@@ -331,6 +335,31 @@ CREATE POLICY "Public View Images" ON storage.objects
   FOR SELECT USING (bucket_id = 'images');
 
 DROP POLICY IF EXISTS "Admins Manage Images" ON storage.objects;
-CREATE POLICY "Admins Manage Images" ON storage.objects
-  FOR ALL USING (bucket_id = 'images' AND is_admin());
+DROP POLICY IF EXISTS "Admins Insert Images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins Update Images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins Delete Images" ON storage.objects;
+
+CREATE POLICY "Admins Insert Images" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'images' AND (
+      (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
+      OR public.is_admin()
+    )
+  );
+
+CREATE POLICY "Admins Update Images" ON storage.objects
+  FOR UPDATE USING (
+    bucket_id = 'images' AND (
+      (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
+      OR public.is_admin()
+    )
+  );
+
+CREATE POLICY "Admins Delete Images" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'images' AND (
+      (auth.jwt() ->> 'email') IN ('goyaracorp@gmail.com', 'tapiwanashe.mandiveyi@gmail.com')
+      OR public.is_admin()
+    )
+  );
 

@@ -261,6 +261,7 @@ export default function AdminDashboard() {
     const title = prompt('Event Title:');
     const date = prompt('Date (YYYY-MM-DD):');
     const location = prompt('Location:');
+    const description = prompt('Event Description / Details:');
     if (!title || !date) return;
 
     if (confirm('Upload an event cover image?')) {
@@ -268,13 +269,13 @@ export default function AdminDashboard() {
       input.type = 'file';
       input.accept = 'image/*';
       input.onchange = (e) => handleFileUpload(e as any, async (image_url) => {
-        const { error } = await supabase.from('events').insert([{ title, event_date: date, location, image_url }]);
+        const { error } = await supabase.from('events').insert([{ title, event_date: date, location, description, image_url }]);
         if (error) alert(`Error adding event: ${error.message}`);
         fetchData();
       });
       input.click();
     } else {
-      const { error } = await supabase.from('events').insert([{ title, event_date: date, location }]);
+      const { error } = await supabase.from('events').insert([{ title, event_date: date, location, description }]);
       if (error) alert(`Error adding event: ${error.message}`);
       fetchData();
     }
@@ -306,6 +307,12 @@ export default function AdminDashboard() {
       if (error) alert(`Error adding link: ${error.message}`);
       fetchData();
     }
+  };
+
+  const toggleSocialActive = async (id: string, current: boolean) => {
+    const { error } = await supabase.from('social_links').update({ is_active: !current }).eq('id', id);
+    if (error) alert(`Error updating link: ${error.message}`);
+    fetchData();
   };
 
   const updateStatus = async (table: string, id: string, status: string) => {
@@ -432,11 +439,13 @@ export default function AdminDashboard() {
         {activeView === 'overview' && <OverviewStats data={data} />}
         
         {activeView === 'donations' && (
-          <Table headers={['Date', 'Amount', 'Status', 'Actions']}>
+          <Table headers={['Date', 'Donor Name', 'Email', 'Amount', 'Status', 'Actions']}>
             {data.donations.map((d: any) => (
-              <tr key={d.id} className="border-b">
+              <tr key={d.id} className="border-b text-sm">
                 <td className="p-4">{new Date(d.created_at).toLocaleDateString()}</td>
-                <td className="p-4 font-bold text-navy">${d.amount}</td>
+                <td className="p-4 font-bold text-navy">{d.donor_name || 'Anonymous'}</td>
+                <td className="p-4 text-xs text-gray-500 font-mono">{d.email || 'N/A'}</td>
+                <td className="p-4 font-bold text-green-600">${d.amount}</td>
                 <td className="p-4 uppercase text-xs font-bold text-gold">{d.payment_status}</td>
                 <td className="p-4">
                   <button onClick={() => deleteItem('donations', d.id)} className="text-red-400 hover:text-red-500 transition-colors">
@@ -513,18 +522,19 @@ export default function AdminDashboard() {
         )}
 
         {activeView === 'volunteers' && (
-          <Table headers={['Date', 'Name', 'Email', 'Expertise', 'Status', 'Actions']}>
+          <Table headers={['Date', 'Name', 'Email', 'Expertise', 'Availability', 'Status', 'Actions']}>
             {data.volunteers.map((v: any) => (
               <tr key={v.id} className="border-b">
                 <td className="p-4 text-sm">{new Date(v.created_at).toLocaleDateString()}</td>
                 <td className="p-4 font-bold">{v.full_name}</td>
                 <td className="p-4 text-sm">{v.email}</td>
                 <td className="p-4 text-sm">{v.expertise}</td>
+                <td className="p-4 text-sm font-medium text-gray-500">{v.availability}</td>
                 <td className="p-4 text-sm">
                    <select 
                      value={v.status || 'pending'} 
                      onChange={(e) => updateStatus('volunteers', v.id, e.target.value)}
-                     className="bg-cream/50 rounded-lg px-2 py-1 outline-none text-xs font-bold uppercase text-navy"
+                     className="bg-cream/50 rounded-lg px-2 py-1 outline-none text-xs font-bold uppercase text-navy border"
                    >
                      <option value="pending">Pending</option>
                      <option value="interviewed">Interviewed</option>
@@ -541,15 +551,28 @@ export default function AdminDashboard() {
         )}
 
         {activeView === 'members' && (
-          <Table headers={['Date', 'Name', 'Email', 'Phone', 'WhatsApp', 'Actions']}>
+          <Table headers={['Date', 'Name', 'Email', 'Phone', 'Areas of Interest', 'WhatsApp', 'Actions']}>
             {data.members.map((m: any) => (
-              <tr key={m.id} className="border-b">
-                <td className="p-4 text-sm">{new Date(m.created_at).toLocaleDateString()}</td>
+              <tr key={m.id} className="border-b text-sm">
+                <td className="p-4">{new Date(m.created_at).toLocaleDateString()}</td>
                 <td className="p-4 font-bold">{m.full_name}</td>
-                <td className="p-4 text-sm">{m.email}</td>
-                <td className="p-4 text-sm">{m.phone}</td>
-                <td className="p-4 text-sm">
-                   {m.whatsapp_joined ? <Check className="text-green-500" /> : <X className="text-red-500" />}
+                <td className="p-4 font-mono text-xs">{m.email}</td>
+                <td className="p-4">{m.phone}</td>
+                <td className="p-4 max-w-xs">
+                  <div className="flex flex-wrap gap-1">
+                    {m.interests && Array.isArray(m.interests) && m.interests.length > 0 ? (
+                      m.interests.map((interest: string, idx: number) => (
+                        <span key={idx} className="bg-gold/10 text-gold text-[10px] font-bold px-1.5 py-0.5 rounded">
+                          {interest}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 italic text-xs">None</span>
+                    )}
+                  </div>
+                </td>
+                <td className="p-4">
+                   {m.whatsapp_joined ? <Check className="text-green-500 h-5 w-5" /> : <X className="text-red-500 h-5 w-5" />}
                 </td>
                 <td className="p-4">
                    <button onClick={() => deleteItem('members', m.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
@@ -567,8 +590,13 @@ export default function AdminDashboard() {
                 <div className="flex-1">
                   <h3 className="font-bold text-navy">{member.name}</h3>
                   <p className="text-xs text-gold font-bold uppercase">{member.role}</p>
+                  {member.linkedin_url && (
+                    <a href={member.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-xs flex items-center gap-1 mt-1 font-semibold">
+                      LinkedIn Link
+                    </a>
+                  )}
                 </div>
-                <button onClick={() => deleteItem('team', member.id)} className="text-red-500"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => deleteItem('team', member.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
@@ -577,15 +605,30 @@ export default function AdminDashboard() {
         {activeView === 'events' && (
           <div className="space-y-4">
             {data.events.map((e: any) => (
-              <div key={e.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex justify-between items-center">
-                <div>
-                  <h3 className="font-bold text-navy">{e.title}</h3>
-                  <div className="flex space-x-4 text-xs text-gray-400 mt-1">
-                    <span>{new Date(e.event_date).toLocaleDateString()}</span>
-                    <span>{e.location}</span>
+              <div key={e.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="flex items-start md:items-center gap-4 flex-1">
+                  {e.image_url && <img src={e.image_url} alt="" className="w-16 h-16 object-cover rounded-2xl flex-shrink-0" />}
+                  <div>
+                    <h3 className="font-bold text-navy">{e.title}</h3>
+                    {e.description && <p className="text-gray-500 text-xs mt-1 max-w-xl italic">"{e.description}"</p>}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase font-bold text-gray-400 mt-2">
+                      <span>Date: {new Date(e.event_date).toLocaleDateString()}</span>
+                      <span>Location: {e.location || 'Online'}</span>
+                    </div>
                   </div>
                 </div>
-                <button onClick={() => deleteItem('events', e.id)} className="text-red-500"><Trash2 className="h-4 w-4" /></button>
+                <div className="flex items-center space-x-4 w-full md:w-auto justify-between md:justify-end flex-shrink-0">
+                  <select 
+                    value={e.status || 'upcoming'} 
+                    onChange={(ev) => updateStatus('events', e.id, ev.target.value)}
+                    className="bg-cream/50 rounded-lg px-2 py-1 outline-none text-xs font-bold uppercase text-navy border"
+                  >
+                    <option value="upcoming">Upcoming</option>
+                    <option value="completed">Completed</option>
+                    <option value="canceled">Canceled</option>
+                  </select>
+                  <button onClick={() => deleteItem('events', e.id)} className="text-red-500 hover:text-red-700 p-2"><Trash2 className="h-4 w-4" /></button>
+                </div>
               </div>
             ))}
           </div>
@@ -614,10 +657,19 @@ export default function AdminDashboard() {
             {data.social.map((s: any) => (
               <tr key={s.id} className="border-b">
                 <td className="p-4 font-bold">{s.platform}</td>
-                <td className="p-4 text-xs truncate max-w-xs">{s.url}</td>
-                <td className="p-4 uppercase text-[10px] font-bold text-gold">{s.is_active ? 'Active' : 'Inactive'}</td>
-                <td className="p-4 text-red-500">
-                  <button onClick={() => deleteItem('social_links', s.id)}><Trash2 className="h-4 w-4" /></button>
+                <td className="p-4 text-xs font-mono truncate max-w-xs">{s.url}</td>
+                <td className="p-4">
+                  <button 
+                    onClick={() => toggleSocialActive(s.id, s.is_active)}
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      s.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}
+                  >
+                    {s.is_active ? 'Active' : 'Inactive'}
+                  </button>
+                </td>
+                <td className="p-4">
+                  <button onClick={() => deleteItem('social_links', s.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
                 </td>
               </tr>
             ))}
@@ -627,11 +679,20 @@ export default function AdminDashboard() {
         {activeView === 'news' && (
            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.news.map((post: any) => (
-              <div key={post.id} className="group relative bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-                {post.image_url && <img src={post.image_url} alt="" className="w-full h-40 object-cover rounded-2xl mb-4" />}
-                <h3 className="font-bold text-navy mb-2">{post.title}</h3>
-                <p className="text-gray-500 text-xs line-clamp-3 mb-4">{post.content}</p>
-                <div className="flex justify-between items-center">
+              <div key={post.id} className="group relative bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                  {post.image_url && <img src={post.image_url} alt="" className="w-full h-40 object-cover rounded-2xl mb-4" />}
+                  <div className="flex justify-between items-start mb-2 gap-2">
+                    <h3 className="font-bold text-navy leading-snug">{post.title}</h3>
+                    {post.category && (
+                      <span className="text-[9px] bg-gold/10 text-gold font-bold px-2 py-0.5 rounded tracking-wider uppercase whitespace-nowrap">
+                        {post.category}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-gray-500 text-xs line-clamp-3 mb-4">{post.content}</p>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-50">
                   <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(post.created_at).toLocaleDateString()}</span>
                   <button onClick={() => deleteItem('news', post.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
                 </div>
@@ -643,14 +704,24 @@ export default function AdminDashboard() {
         {activeView === 'gallery' && (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {data.gallery.map((img: any) => (
-              <div key={img.id} className="group relative bg-white p-2 rounded-xl shadow-sm">
-                <img src={img.url} alt="" className="w-full h-40 object-cover rounded-lg" />
-                <button 
-                  onClick={() => deleteItem('gallery', img.id)}
-                  className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+              <div key={img.id} className="group relative bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                  <div className="relative overflow-hidden rounded-xl mb-3">
+                    <img src={img.url} alt="" className="w-full h-40 object-cover rounded-xl" />
+                    <button 
+                      onClick={() => deleteItem('gallery', img.id)}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {img.caption && <p className="text-navy text-xs font-semibold px-1">{img.caption}</p>}
+                </div>
+                {img.category && (
+                  <span className="text-[9px] text-gold font-bold uppercase tracking-wider bg-gold/5 px-2 py-0.5 rounded-md mt-2 w-max ml-1">
+                    {img.category}
+                  </span>
+                )}
               </div>
             ))}
           </div>
