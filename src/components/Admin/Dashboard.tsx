@@ -346,6 +346,28 @@ export default function AdminDashboard() {
     fetchData(true);
   };
 
+  const handlePartnerLogoUpload = async (partnerId: string, file: File) => {
+    try {
+      const url = await uploadImage(file);
+      const { error } = await supabase.from('partners').update({ logo_url: url }).eq('id', partnerId);
+      if (error) throw error;
+      fetchData(true);
+    } catch (err: any) {
+      alert('Failed uploading logo: ' + err.message);
+    }
+  };
+
+  const removePartnerLogo = async (partnerId: string) => {
+    if (confirm('Are you sure you want to remove this partner logo?')) {
+      const { error } = await supabase.from('partners').update({ logo_url: null }).eq('id', partnerId);
+      if (error) {
+        alert('Failed removing logo: ' + error.message);
+      } else {
+        fetchData(true);
+      }
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="flex flex-col items-center">
       <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
@@ -690,6 +712,56 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
                   <div><span className="text-gray-400 font-medium">Industry:</span> {p.industry}</div>
                   <div><span className="text-gray-400 font-medium">Email:</span> {p.email}</div>
+                  <div className="sm:col-span-2">
+                    <span className="text-gray-400 font-medium">Ad/Collaboration Link:</span> 
+                    {p.website_url ? (
+                      <a 
+                        href={p.website_url.startsWith('http') ? p.website_url : `https://${p.website_url}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-gold font-bold hover:underline ml-1 break-all"
+                      >
+                        {p.website_url}
+                      </a>
+                    ) : (
+                      <span className="text-gray-400 italic ml-1">None provided</span>
+                    )}
+                  </div>
+                  <div className="sm:col-span-2 flex items-center space-x-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="w-14 h-14 bg-navy rounded-lg flex items-center justify-center overflow-hidden p-1 text-gold flex-shrink-0">
+                      {p.logo_url ? (
+                        <img src={p.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="font-serif font-bold text-sm uppercase">{p.org_name ? p.org_name.charAt(0) : 'P'}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-navy">Corporate Brand Logo</p>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <label className="cursor-pointer bg-navy hover:bg-navy/90 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg">
+                          <span>Upload Logo</span>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) {
+                                handlePartnerLogoUpload(p.id, e.target.files[0]);
+                              }
+                            }}
+                          />
+                        </label>
+                        {p.logo_url && (
+                          <button 
+                            onClick={() => removePartnerLogo(p.id)}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <div>
                     <span className="text-gray-400 font-medium">Status:</span> 
                     <select 
@@ -1087,6 +1159,8 @@ function OverviewStats({ data }: any) {
             <pre className="p-4 bg-gray-900 text-gray-100 border border-gray-800 rounded-2xl text-[11px] font-mono overflow-x-auto select-all max-h-96 scrollbar-thin whitespace-pre leading-normal">
 {`-- A. FIX MISSING COLUMN error on updates
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS website_url TEXT;
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS logo_url TEXT;
 
 -- B. CREATE 'deductions' table for budget disbursement metrics
 CREATE TABLE IF NOT EXISTS public.deductions (

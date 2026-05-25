@@ -51,8 +51,17 @@ export default function Partners() {
                 className="group bg-white rounded-3xl p-8 border border-gray-100 hover:border-gold/30 hover:shadow-2xl transition-all duration-500"
               >
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-                  <div className="w-24 h-24 flex-shrink-0 bg-navy rounded-full p-4 flex items-center justify-center text-gold font-serif text-3xl font-bold border-4 border-cream shadow-md group-hover:scale-110 transition-transform duration-500">
-                    {partner.org_name ? partner.org_name.charAt(0) : 'P'}
+                  <div className="w-24 h-24 flex-shrink-0 bg-navy rounded-2xl overflow-hidden flex items-center justify-center text-gold border-4 border-cream shadow-md group-hover:scale-110 transition-transform duration-500 p-2">
+                    {partner.logo_url ? (
+                      <img 
+                        src={partner.logo_url} 
+                        alt={`${partner.org_name} Logo`} 
+                        className="w-full h-full object-contain"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="font-serif text-3xl font-bold uppercase">{partner.org_name ? partner.org_name.charAt(0) : 'P'}</span>
+                    )}
                   </div>
                   <div className="flex-1 text-center md:text-left">
                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-3">
@@ -63,9 +72,21 @@ export default function Partners() {
                       <Briefcase className="h-4 w-4 mt-1 text-gold flex-shrink-0" />
                       <p className="text-base leading-relaxed italic text-gray-500">"{partner.message}"</p>
                     </div>
-                    <span className="inline-flex items-center text-sm font-bold text-navy/60 group-hover:text-gold transition-colors">
-                      Market Collaboration Project <ExternalLink className="ml-1 h-3 w-3" />
-                    </span>
+                    {partner.website_url ? (
+                      <a 
+                        href={partner.website_url.startsWith('http') ? partner.website_url : `https://${partner.website_url}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        referrerPolicy="no-referrer"
+                        className="inline-flex items-center text-sm font-bold text-navy hover:text-gold transition-colors underline decoration-gold/40 decoration-2 underline-offset-4"
+                      >
+                        Visit Partner Link & Adverts <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center text-sm font-bold text-navy/60 group-hover:text-gold transition-colors">
+                        Market Collaboration Project <ExternalLink className="ml-1 h-3 w-3" />
+                      </span>
+                    )}
                   </div>
                 </div>
               </motion.div>

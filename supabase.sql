@@ -215,7 +215,8 @@ CREATE TABLE IF NOT EXISTS partners (
   industry TEXT NOT NULL,
   message TEXT NOT NULL,
   email TEXT NOT NULL,
-  status TEXT DEFAULT 'pending'
+  status TEXT DEFAULT 'pending',
+  website_url TEXT
 );
 
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
@@ -381,6 +382,7 @@ CREATE POLICY "Public Delete Images" ON storage.objects
 
 -- Retroactive fixes to ensure columns exist on historical installations
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS website_url TEXT;
 
 
 -- 16. Deductions / Fund Disbursements Table (Transparency Tracker)

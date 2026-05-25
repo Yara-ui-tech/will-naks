@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Handshake, Users, GraduationCap, CheckCircle2 } from 'lucide-react';
+import { Heart, Handshake, Users, GraduationCap, CheckCircle2, Upload, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 type SupportType = 'donate' | 'partner' | 'volunteer' | 'scholarship';
@@ -9,6 +9,42 @@ export default function Support() {
   const [activeTab, setActiveTab] = useState<SupportType>('donate');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setUploadingLogo(true);
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `partner-${Math.random()}.${fileExt}`;
+        const filePath = `partners/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data } = supabase.storage
+          .from('images')
+          .getPublicUrl(filePath);
+
+        setLogoUrl(data.publicUrl);
+      } catch (err: any) {
+        alert('Upload failed: ' + err.message);
+      } finally {
+        setUploadingLogo(false);
+      }
+    }
+  };
+
+  const removeLogo = () => {
+    setLogoUrl(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -23,7 +59,9 @@ export default function Support() {
           org_name: data.org_name,
           industry: data.industry,
           message: data.message,
-          email: data.email
+          email: data.email,
+          website_url: data.website_url || null,
+          logo_url: logoUrl
         }]);
         if (error) throw error;
       } else if (activeTab === 'volunteer') {
@@ -178,12 +216,62 @@ export default function Support() {
                         </select>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Contact Email</label>
-                       <input required name="email" type="email" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" />
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                         <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Contact Email</label>
+                         <input required name="email" type="email" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Website or Collaboration Link (For Ads/Promo)</label>
+                         <input name="website_url" type="url" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" placeholder="https://example.com" />
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Company logo (Optional)</label>
+                       {logoUrl ? (
+                         <div className="flex items-center justify-between p-4 bg-gold/5 border border-gold/20 rounded-2xl">
+                           <div className="flex items-center space-x-4">
+                             <img src={logoUrl} alt="Uploaded logo" className="h-16 w-16 object-contain bg-navy rounded-xl p-2 border border-navy/10" />
+                             <div>
+                               <p className="text-sm font-bold text-navy">Logo successfully attached!</p>
+                               <p className="text-xs text-gray-400">This will be featured in the partners registry upon approval.</p>
+                             </div>
+                           </div>
+                           <button 
+                             type="button" 
+                             onClick={removeLogo} 
+                             className="text-red-500 hover:text-red-600 text-xs font-bold flex items-center space-x-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                           >
+                             <Trash2 className="h-4 w-4" /> <span>Remove</span>
+                           </button>
+                         </div>
+                       ) : (
+                         <div className="border-2 border-dashed border-gray-200 hover:border-gold rounded-2xl p-6 transition-all bg-cream/15 text-center relative hover:bg-cream/20">
+                           <input 
+                             type="file" 
+                             accept="image/*" 
+                             onChange={handleLogoUpload} 
+                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                             disabled={uploadingLogo}
+                           />
+                           <div className="space-y-2">
+                             <div className="flex justify-center">
+                               {uploadingLogo ? (
+                                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold"></div>
+                               ) : (
+                                 <Upload className="h-8 w-8 text-gray-400" />
+                               )}
+                             </div>
+                             <p className="text-xs font-semibold text-gray-500">
+                               {uploadingLogo ? 'Uploading brand identity...' : 'Drag and drop or click to upload brand logo'}
+                             </p>
+                             <p className="text-[10px] text-gray-400">PNG, JPG or SVG up to 5MB</p>
+                           </div>
+                         </div>
+                       )}
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Proposed Partnership Area</label>
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 font-sans">Proposed Partnership Area</label>
                       <textarea name="message" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5 h-32" placeholder="Tell us how you would like to collaborate..."></textarea>
                     </div>
                     <button 
