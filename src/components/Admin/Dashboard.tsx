@@ -21,10 +21,12 @@ import {
   Share2,
   Users2,
   ArrowLeft,
-  DollarSign
+  DollarSign,
+  BarChart3
 } from 'lucide-react';
+import FinancialReportsView from './FinancialReportsView';
 
-type View = 'overview' | 'donations' | 'deductions' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages';
+type View = 'overview' | 'donations' | 'deductions' | 'financial-reports' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages';
 
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<View>('overview');
@@ -416,6 +418,7 @@ export default function AdminDashboard() {
           <NavItem active={activeView === 'overview'} onClick={() => { setActiveView('overview'); setIsSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" />
           <NavItem active={activeView === 'donations'} onClick={() => { setActiveView('donations'); setIsSidebarOpen(false); }} icon={Heart} label="Donations" />
           <NavItem active={activeView === 'deductions'} onClick={() => { setActiveView('deductions'); setIsSidebarOpen(false); }} icon={DollarSign} label="Fund Deductions" />
+          <NavItem active={activeView === 'financial-reports'} onClick={() => { setActiveView('financial-reports'); setIsSidebarOpen(false); }} icon={BarChart3} label="Financial Reports" />
           <NavItem active={activeView === 'scholarships'} onClick={() => { setActiveView('scholarships'); setIsSidebarOpen(false); }} icon={GraduationCap} label="Scholarships" />
           <NavItem active={activeView === 'partners'} onClick={() => { setActiveView('partners'); setIsSidebarOpen(false); }} icon={Handshake} label="Partners" />
           <NavItem active={activeView === 'volunteers'} onClick={() => { setActiveView('volunteers'); setIsSidebarOpen(false); }} icon={UserPlus} label="Volunteers" />
@@ -667,12 +670,19 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
           </div>
         )}
 
+        {activeView === 'financial-reports' && (
+          <FinancialReportsView data={data} />
+        )}
+
         {activeView === 'scholarships' && (
           <div className="space-y-4">
             {data.scholarships.map((s: any) => (
               <div key={s.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
                 <div className="flex justify-between mb-4">
-                  <h3 className="font-bold text-navy">{s.full_name}</h3>
+                  <div>
+                    <h3 className="font-bold text-navy text-lg">{s.full_name}</h3>
+                    {s.phone && <p className="text-xs text-gold font-mono">{s.phone}</p>}
+                  </div>
                   <div className="flex items-center space-x-3">
                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(s.created_at).toLocaleDateString()}</span>
                     <button onClick={() => deleteItem('scholarships', s.id)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -680,16 +690,75 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                     </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
-                  <div><span className="text-gray-400 font-medium">Level:</span> {s.education_level}</div>
-                  <div><span className="text-gray-400 font-medium">Institution:</span> {s.institution}</div>
-                  <div><span className="text-gray-400 font-medium">Email:</span> {s.email}</div>
-                  <div><span className="text-gray-400 font-medium">Status:</span> <span className="text-gold font-bold uppercase text-[10px]">{s.status}</span></div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4 text-xs font-sans text-navy bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">A: Personal Details</p>
+                    <div><span className="text-gray-400 font-medium">DOB:</span> {s.date_of_birth || 'N/A'} (Age {s.age || 'N/A'})</div>
+                    <div><span className="text-gray-400 font-medium">Gender:</span> {s.gender || 'N/A'}</div>
+                    <div><span className="text-gray-400 font-medium">Nationality:</span> {s.nationality || 'N/A'}</div>
+                    <div><span className="text-gray-400 font-medium">ID / Birth Cert:</span> {s.birth_cert_no || 'N/A'}</div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">B: Academic & Aspiration</p>
+                    <div><span className="text-gray-400 font-medium">School:</span> {s.education_level || 'N/A'}</div>
+                    <div><span className="text-gray-400 font-medium">Grade/Form:</span> {s.institution || 'N/A'}</div>
+                    <div><span className="text-gray-450 font-bold text-gold">Subjects of Strength:</span> {s.subjects_strength || 'N/A'}</div>
+                    <div><span className="text-gray-455 font-bold text-gold">Aspirations:</span> {s.career_aspirations || 'N/A'}</div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">C: Family & Finance</p>
+                    <div><span className="text-gray-400 font-medium">Guardian:</span> {s.parent_name || 'N/A'} ({s.parent_relationship || 'N/A'})</div>
+                    <div><span className="text-gray-400 font-medium">Occupation:</span> {s.parent_occupation || 'N/A'}</div>
+                    <div><span className="text-gray-400 font-medium">Monthly Income:</span> {s.monthly_income || 'N/A'}</div>
+                    <div><span className="text-gray-400 font-medium">Dependants:</span> {s.dependants_count ?? 'N/A'}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-400 font-medium">Orphan:</span>{' '}
+                      <span className={`font-bold uppercase text-[9px] px-1.5 py-0.5 rounded ${s.is_orphan ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                        {s.is_orphan ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    {s.carer_details && <div><span className="text-gray-400 font-medium">Care/Hardship:</span> {s.carer_details}</div>}
+                  </div>
                 </div>
-                <p className="text-gray-600 text-sm italic">"{s.reason}"</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                   <button onClick={() => updateStatus('scholarships', s.id, 'approved')} className="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase hover:bg-green-200 transition-colors">Approve</button>
-                   <button onClick={() => updateStatus('scholarships', s.id, 'denied')} className="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase hover:bg-red-200 transition-colors">Deny</button>
+
+                <div className="mb-4 text-xs font-sans">
+                  <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] block mb-1">D: Targeted Program Request</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {s.chosen_programs && s.chosen_programs.length > 0 ? (
+                      s.chosen_programs.map((prog: string) => (
+                        <span key={prog} className="bg-gold/10 text-navy font-bold text-[9px] uppercase tracking-wider px-2 py-1 rounded-lg border border-gold/10">
+                          {prog}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 italic">No specific program checked</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-cream/10 border border-gold/10 rounded-xl mb-4 text-xs font-sans">
+                  <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] block mb-1">E: Reason for Hardship / Message</span>
+                  <p className="text-gray-700 leading-relaxed italic">"{s.reason}"</p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-gray-400 text-xs font-medium">Application Status:</span> 
+                    <span className={`font-bold uppercase text-[10px] px-2 py-1 rounded-md ${
+                      s.status === 'approved' ? 'bg-green-50 text-green-700 border border-green-100' :
+                      s.status === 'denied' ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
+                    }`}>
+                      {s.status}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2">
+                     <button onClick={() => updateStatus('scholarships', s.id, 'approved')} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-colors">Approve</button>
+                     <button onClick={() => updateStatus('scholarships', s.id, 'denied')} className="bg-red-600 hover:bg-red-750 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-colors">Deny</button>
+                  </div>
                 </div>
               </div>
             ))}

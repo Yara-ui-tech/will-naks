@@ -383,6 +383,24 @@ CREATE POLICY "Public Delete Images" ON storage.objects
 -- Retroactive fixes to ensure columns exist on historical installations
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS website_url TEXT;
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS logo_url TEXT;
+
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS date_of_birth TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS age INTEGER;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS gender TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS nationality TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS birth_cert_no TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS parent_name TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS parent_relationship TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS parent_occupation TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS monthly_income TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS dependants_count INTEGER;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS is_orphan BOOLEAN DEFAULT false;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS carer_details TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS subjects_strength TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS career_aspirations TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS chosen_programs TEXT[];
 
 
 -- 16. Deductions / Fund Disbursements Table (Transparency Tracker)
@@ -400,7 +418,7 @@ ALTER TABLE public.deductions ENABLE ROW LEVEL SECURITY;
 
 -- Allow public viewing of how money is utilized
 DROP POLICY IF EXISTS "Public view deductions" ON public.deductions;
-CREATE POLICY "APublic view deductions" ON public.deductions FOR SELECT USING (true);
+CREATE POLICY "Public view deductions" ON public.deductions FOR SELECT USING (true);
 
 -- Allow admins full control over disbursement tracking
 DROP POLICY IF EXISTS "Admins manage deductions" ON public.deductions;

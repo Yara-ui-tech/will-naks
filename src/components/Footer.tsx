@@ -40,11 +40,11 @@ export default function Footer() {
   ];
 
   const supportLinks = [
-    { name: 'Donate Now', path: '/support' },
+    { name: 'Donate Now', path: '/support?tab=donate' },
     { name: 'Become a member', path: '/join' },
-    { name: 'Become a Partner', path: '/support' },
-    { name: 'Scholarship App', path: '/support' },
-    { name: 'Volunteer Signup', path: '/support' },
+    { name: 'Become a Partner', path: '/support?tab=partner' },
+    { name: 'Scholarship App', path: '/support?tab=scholarship' },
+    { name: 'Volunteer Signup', path: '/support?tab=volunteer' },
     { name: 'News & Blog', path: '/news' },
     { name: 'Admin Portal', path: '/admin' },
   ];

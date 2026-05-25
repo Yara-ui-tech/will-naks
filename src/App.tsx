@@ -21,6 +21,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import DonationNotification from './components/DonationNotification';
+import ScrollToTop from './components/ScrollToTop';
 import { supabase } from './lib/supabase';
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -111,6 +112,7 @@ export default function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <Layout>
         <Routes>
           <Route path="/" element={<Home />} />

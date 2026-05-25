@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Handshake, Users, GraduationCap, CheckCircle2, Upload, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -6,7 +7,29 @@ import { supabase } from '../lib/supabase';
 type SupportType = 'donate' | 'partner' | 'volunteer' | 'scholarship';
 
 export default function Support() {
-  const [activeTab, setActiveTab] = useState<SupportType>('donate');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  
+  const [activeTab, setActiveTab] = useState<SupportType>(() => {
+    if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship'].includes(tabParam)) {
+      return tabParam as SupportType;
+    }
+    return 'donate';
+  });
+
+  useEffect(() => {
+    if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship'].includes(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam as SupportType);
+      setSubmitted(false);
+    }
+  }, [tabParam, activeTab]);
+
+  const handleTabChange = (tabId: SupportType) => {
+    setActiveTab(tabId);
+    setSubmitted(false);
+    setSearchParams({ tab: tabId });
+  };
+
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -73,12 +96,33 @@ export default function Support() {
         }]);
         if (error) throw error;
       } else if (activeTab === 'scholarship') {
+        const chosen_programs = formData.getAll('chosen_programs') as string[];
+        const is_orphan = data.is_orphan === 'yes';
+        const age = parseInt(data.age as string, 10) || null;
+        const dependants_count = parseInt(data.dependants_count as string, 10) || null;
+
         const { error } = await supabase.from('scholarships').insert([{
           full_name: data.full_name,
           email: data.email,
           education_level: data.education_level,
           institution: data.institution,
-          reason: data.reason
+          reason: data.reason,
+          date_of_birth: data.date_of_birth || null,
+          age: age,
+          gender: data.gender || null,
+          nationality: data.nationality || null,
+          birth_cert_no: data.birth_cert_no || null,
+          phone: data.phone || null,
+          parent_name: data.parent_name || null,
+          parent_relationship: data.parent_relationship || null,
+          parent_occupation: data.parent_occupation || null,
+          monthly_income: data.monthly_income || null,
+          dependants_count: dependants_count,
+          is_orphan: is_orphan,
+          carer_details: data.carer_details || null,
+          subjects_strength: data.subjects_strength || null,
+          career_aspirations: data.career_aspirations || null,
+          chosen_programs: chosen_programs.length > 0 ? chosen_programs : null
         }]);
         if (error) throw error;
       } else if (activeTab === 'donate') {
@@ -125,10 +169,7 @@ export default function Support() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id as SupportType);
-                  setSubmitted(false);
-                }}
+                onClick={() => handleTabChange(tab.id as SupportType)}
                 className={`flex items-center space-x-3 px-8 py-4 rounded-2xl font-bold transition-all ${
                   activeTab === tab.id 
                     ? 'bg-navy text-white shadow-2xl shadow-navy/20 scale-105' 
@@ -326,41 +367,217 @@ export default function Support() {
                 )}
 
                 {activeTab === 'scholarship' && (
-                  <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="text-center mb-12">
-                      <h2 className="text-3xl font-serif font-bold text-navy mb-4 italic">Scholarship Application</h2>
-                      <p className="text-gray-600">Tell us your story and how we can support your educational goals.</p>
+                  <form onSubmit={handleSubmit} className="space-y-10 text-left">
+                    <div className="text-center mb-10">
+                      <h2 className="text-3xl font-serif font-bold text-navy mb-4 italic">Student Beneficiary Application Form</h2>
+                      <p className="text-gray-600 text-sm">Official Intake Portal — WILL-NAKS FOUNDATION, Harare, Zimbabwe</p>
                     </div>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
-                        <input required name="full_name" type="text" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" />
+
+                    {/* SECTION A */}
+                    <div className="space-y-6">
+                      <div className="border-b border-gold/20 pb-2">
+                        <span className="text-[10px] font-bold text-gold uppercase tracking-wider block">Section A</span>
+                        <h3 className="text-lg font-serif font-bold text-navy">Personal Information</h3>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-                        <input required name="email" type="email" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" />
+                      
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Full Name</label>
+                          <input required name="full_name" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Applicant Full Name" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Email Address (Optional)</label>
+                          <input name="email" type="email" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="yourname@gmail.com" />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Date of Birth</label>
+                          <input required name="date_of_birth" type="date" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Age</label>
+                          <input required name="age" type="number" min="1" max="100" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. 15" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Gender</label>
+                          <select required name="gender" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans">
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Nationality</label>
+                          <input required name="nationality" type="text" defaultValue="Zimbabwean" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">National ID / Birth Certificate No</label>
+                          <input required name="birth_cert_no" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. 58-294711-X-43" />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Home Address</label>
+                          <input required name="institution" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Residential Town & Street" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Primary Phone / WhatsApp</label>
+                          <input required name="phone" type="tel" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. 0775 386 704" />
+                        </div>
                       </div>
                     </div>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Current Level of Education</label>
-                        <input required name="education_level" type="text" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" />
+
+                    {/* SECTION B */}
+                    <div className="space-y-6">
+                      <div className="border-b border-gold/20 pb-2">
+                        <span className="text-[10px] font-bold text-gold uppercase tracking-wider block">Section B</span>
+                        <h3 className="text-lg font-serif font-bold text-navy">Academic Information</h3>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Institution Name</label>
-                        <input required name="institution" type="text" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5" />
+
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Current School / Institution</label>
+                          <input required name="education_level" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="School Name" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Grade / Form / Academic Year</label>
+                          <input required name="grade_form" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. Form 3" />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Previous Academic Result</label>
+                          <input required name="previous_result" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. 8 As or 74% average" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Subjects of Strength</label>
+                          <input required name="subjects_strength" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. Mathematics, Science" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Future Career Aspirations</label>
+                          <input required name="career_aspirations" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. Doctor, Engineer" />
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Reason for Application</label>
-                      <textarea name="reason" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5 h-48" placeholder="Please describe your current financial situation and how this scholarship will impact your future..."></textarea>
+
+                    {/* SECTION C */}
+                    <div className="space-y-6">
+                      <div className="border-b border-gold/20 pb-2">
+                        <span className="text-[10px] font-bold text-gold uppercase tracking-wider block">Section C</span>
+                        <h3 className="text-lg font-serif font-bold text-navy">Family & Financial Background</h3>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Parent/Guardian Name</label>
+                          <input required name="parent_name" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Primary Guardian Full Name" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Relationship to Student</label>
+                          <input required name="parent_relationship" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. Mother, Uncle, Grandmother" />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Occupation of Parent</label>
+                          <input required name="parent_occupation" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. Subsistence farmer" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Estimated Household Monthly Income</label>
+                          <input required name="monthly_income" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. USD $150" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Number of Household Dependants</label>
+                          <input required name="dependants_count" type="number" min="0" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. 5" />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-6 pt-2">
+                        <div className="bg-cream/20 p-5 rounded-2xl border border-gold/10 space-y-3">
+                          <label className="text-xs font-bold text-navy uppercase tracking-wider block">Are you an orphan?</label>
+                          <div className="flex gap-6 mt-1 text-sm text-gray-700 font-semibold">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input type="radio" name="is_orphan" value="yes" className="accent-gold h-4 w-4" />
+                              <span>Yes</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input type="radio" name="is_orphan" value="no" defaultChecked className="accent-gold h-4 w-4" />
+                              <span>No</span>
+                            </label>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">If yes, details of caretakers / hardship</label>
+                          <input name="carer_details" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Provide context of current care" />
+                        </div>
+                      </div>
                     </div>
+
+                    {/* SECTION D */}
+                    <div className="space-y-6">
+                      <div className="border-b border-gold/20 pb-2">
+                        <span className="text-[10px] font-bold text-gold uppercase tracking-wider block">Section D</span>
+                        <h3 className="text-lg font-serif font-bold text-navy">Support Required & Declarations</h3>
+                      </div>
+
+                      <div className="bg-cream/20 p-6 rounded-2xl border border-gold/10 space-y-4">
+                        <p className="text-xs font-bold text-navy uppercase tracking-wider">Select matching program areas:</p>
+                        <div className="grid sm:grid-cols-2 gap-4 text-xs font-bold text-navy">
+                          {[
+                            'School Fees Assistance',
+                            'Scholarship Application',
+                            'Educational Resources (textbooks/uniforms)',
+                            'Mentorship Programme',
+                            'Leadership Development Programme',
+                            'Orphans, elderly and widows support'
+                          ].map((program) => (
+                            <label key={program} className="flex items-start gap-2.5 bg-white p-3 rounded-xl border border-navy/5 shadow-sm hover:border-gold/30 cursor-pointer">
+                              <input type="checkbox" name="chosen_programs" value={program} className="accent-gold h-4 w-4 mt-0.5" />
+                              <span className="leading-tight">{program}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Reason for Application & Context of hardship</label>
+                        <textarea required name="reason" className="w-full px-5 py-4 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold h-32 text-sm font-sans" placeholder="Explain your circumstances and how WILL-NAKS can partner with you..."></textarea>
+                      </div>
+                    </div>
+
+                    {/* SECTION E DECLARATION */}
+                    <div className="space-y-4">
+                      <div className="border-b border-gold/20 pb-2">
+                        <span className="text-[10px] font-bold text-gold uppercase tracking-wider block">Section E</span>
+                        <h3 className="text-lg font-serif font-bold text-navy">Declaration Agreements</h3>
+                      </div>
+                      <div className="p-4 bg-navy/[0.02] border border-gold/15 rounded-2xl space-y-3 text-xs text-gray-500 leading-relaxed font-sans">
+                        <label className="flex items-start gap-3 cursor-pointer">
+                          <input required type="checkbox" className="accent-gold h-5 w-5 mt-0.5 flex-shrink-0" />
+                          <span>I declare that all information provided in this application is entirely true and accurate. I understand that any false information will result in immediate disqualification from the program.</span>
+                        </label>
+                        <label className="flex items-start gap-3 cursor-pointer">
+                          <input required type="checkbox" className="accent-gold h-5 w-5 mt-0.5 flex-shrink-0" />
+                          <span>We (Student & Parent/Guardian) authorize WILL-NAKS FOUNDATION or its representatives to verify any details supplied in connection with this hardship assessment form.</span>
+                        </label>
+                      </div>
+                    </div>
+
                     <button 
                       type="submit"
                       disabled={loading}
                       className="w-full py-5 bg-gold text-navy rounded-2xl font-bold text-xl hover:bg-gold-light transition-all disabled:opacity-50"
                     >
-                      {loading ? 'Processing Application...' : 'Submit Application'}
+                      {loading ? 'Processing Assessment Intake...' : 'Submit Beneficiary Application'}
                     </button>
                   </form>
                 )}

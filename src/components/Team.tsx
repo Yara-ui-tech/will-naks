@@ -33,7 +33,7 @@ export default function Team() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {(team.length > 0 ? team : []).map((member, index) => (
+          {(team.length > 0 ? team : TEAM).map((member, index) => (
             <motion.div
               key={member.id || member.name}
               initial={{ opacity: 0, y: 30 }}
@@ -45,7 +45,7 @@ export default function Team() {
               <div className="relative mb-8 inline-block">
                 <div className="w-48 h-48 rounded-full overflow-hidden border-[10px] border-cream shadow-inner group-hover:border-gold/20 transition-all duration-500">
                   <img 
-                    src={member.image_url || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=400'} 
+                    src={member.image_url || member.image || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=400'} 
                     alt={member.name} 
                     className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
                     referrerPolicy="no-referrer"
@@ -54,9 +54,9 @@ export default function Team() {
                     }}
                   />
                 </div>
-                {member.linkedin_url && (
+                {(member.linkedin_url || member.linkedin) && (
                   <a 
-                    href={member.linkedin_url}
+                    href={member.linkedin_url || member.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="absolute bottom-2 right-2 p-4 bg-gold rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 shadow-lg hover:bg-navy hover:text-gold"
@@ -69,8 +69,8 @@ export default function Team() {
               <p className="text-gold font-bold text-xs uppercase tracking-widest mb-8 font-sans">{member.role}</p>
               
               <div className="flex justify-center space-x-6 invisible group-hover:visible transition-all duration-500">
-                {member.linkedin_url && (
-                  <a href={member.linkedin_url} target="_blank" rel="noopener noreferrer" className="p-3 bg-cream rounded-full text-navy/40 hover:text-navy hover:bg-gold transition-all duration-300">
+                {(member.linkedin_url || member.linkedin) && (
+                  <a href={member.linkedin_url || member.linkedin} target="_blank" rel="noopener noreferrer" className="p-3 bg-cream rounded-full text-navy/40 hover:text-navy hover:bg-gold transition-all duration-300">
                     <Linkedin className="h-5 w-5" />
                   </a>
                 )}
