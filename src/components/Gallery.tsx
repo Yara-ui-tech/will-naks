@@ -13,8 +13,8 @@ export default function Gallery() {
 
   const fetchGallery = async () => {
     try {
-      const { data } = await supabase.from('gallery').select('url');
-      setImages(data ? data.map(item => item.url) : []);
+      const { data } = await supabase.from('gallery').select('url, category');
+      setImages(data ? data.filter((item: any) => item.category !== 'Merchandise').map(item => item.url) : []);
     } catch (err) {
       console.warn('Failed to fetch gallery from database:', err);
       setImages([]);

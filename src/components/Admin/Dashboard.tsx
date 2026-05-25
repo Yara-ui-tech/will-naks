@@ -22,11 +22,13 @@ import {
   Users2,
   ArrowLeft,
   DollarSign,
-  BarChart3
+  BarChart3,
+  ShoppingBag,
+  Edit
 } from 'lucide-react';
 import FinancialReportsView from './FinancialReportsView';
 
-type View = 'overview' | 'donations' | 'deductions' | 'financial-reports' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages';
+type View = 'overview' | 'donations' | 'deductions' | 'financial-reports' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages' | 'merchandise';
 
 const extractDetail = (str: string | null, key: string, fallback = 'N/A') => {
   if (!str) return fallback;
@@ -65,6 +67,112 @@ export default function AdminDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fetchErrors, setFetchErrors] = useState<string[]>([]);
+
+  // Merchandise Store Admin states & handlers
+  const [isMerchModalOpen, setIsMerchModalOpen] = useState(false);
+  const [editingMerchId, setEditingMerchId] = useState<string | null>(null);
+  const [merchForm, setMerchForm] = useState({
+    title: '',
+    price: 15,
+    description: '',
+    variants: 'S, M, L, XL',
+    in_stock: true,
+    url: ''
+  });
+  const [uploadingMerchImage, setUploadingMerchImage] = useState(false);
+
+  const openAddMerchProduct = () => {
+    setEditingMerchId(null);
+    setMerchForm({
+      title: '',
+      price: 15,
+      description: '',
+      variants: 'S, M, L, XL',
+      in_stock: true,
+      url: ''
+    });
+    setIsMerchModalOpen(true);
+  };
+
+  const openEditMerchProduct = (product: any) => {
+    let details: any = {};
+    try {
+      details = JSON.parse(product.caption || '{}');
+    } catch {
+      details = { title: product.caption, price: 15, description: '', variants: 'S, M, L, XL', in_stock: true };
+    }
+    setEditingMerchId(product.id);
+    setMerchForm({
+      title: details.title || product.caption || 'Official Merchandise',
+      price: typeof details.price === 'number' ? details.price : parseFloat(details.price) || 15,
+      description: details.description || '',
+      variants: details.variants || 'S, M, L, XL',
+      in_stock: details.in_stock !== false,
+      url: product.url
+    });
+    setIsMerchModalOpen(true);
+  };
+
+  const handleMerchImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setUploadingMerchImage(true);
+      try {
+        const url = await uploadImage(e.target.files[0]);
+        setMerchForm(prev => ({ ...prev, url }));
+      } catch (err: any) {
+        alert('Image upload failed: ' + err.message);
+      } finally {
+        setUploadingMerchImage(false);
+      }
+    }
+  };
+
+  const handleSaveMerchProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!merchForm.title.trim()) {
+      alert('Product title is required.');
+      return;
+    }
+    if (!merchForm.url) {
+      alert('Product image is required.');
+      return;
+    }
+
+    const captionJSON = JSON.stringify({
+      title: merchForm.title.trim(),
+      price: Number(merchForm.price) || 0,
+      description: merchForm.description.trim(),
+      variants: merchForm.variants.trim(),
+      in_stock: merchForm.in_stock
+    });
+
+    try {
+      if (editingMerchId) {
+        const { error } = await supabase
+          .from('gallery')
+          .update({
+            url: merchForm.url,
+            caption: captionJSON,
+            category: 'Merchandise'
+          })
+          .eq('id', editingMerchId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('gallery')
+          .insert([{
+            url: merchForm.url,
+            caption: captionJSON,
+            category: 'Merchandise'
+          }]);
+        if (error) throw error;
+      }
+      setIsMerchModalOpen(false);
+      fetchData(true);
+    } catch (err: any) {
+      alert('Failed to save product: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -444,6 +552,7 @@ export default function AdminDashboard() {
           <NavItem active={activeView === 'social'} onClick={() => { setActiveView('social'); setIsSidebarOpen(false); }} icon={Share2} label="Social Links" />
           <NavItem active={activeView === 'testimonials'} onClick={() => { setActiveView('testimonials'); setIsSidebarOpen(false); }} icon={MessageSquare} label="Testimonials" />
           <NavItem active={activeView === 'messages'} onClick={() => { setActiveView('messages'); setIsSidebarOpen(false); }} icon={MessageSquare} label="Inbox" />
+          <NavItem active={activeView === 'merchandise'} onClick={() => { setActiveView('merchandise'); setIsSidebarOpen(false); }} icon={ShoppingBag} label="Fundraising Store" />
           <NavItem active={activeView === 'admins'} onClick={() => { setActiveView('admins'); setIsSidebarOpen(false); }} icon={Users} label="Users & Admins" />
         </nav>
 
@@ -521,6 +630,11 @@ export default function AdminDashboard() {
             {activeView === 'social' && (
               <button onClick={addSocialLink} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
                 <Plus className="h-4 w-4" /> <span>Add Link</span>
+              </button>
+            )}
+            {activeView === 'merchandise' && (
+              <button onClick={openAddMerchProduct} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Product</span>
               </button>
             )}
           </div>
@@ -1057,7 +1171,7 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
 
         {activeView === 'gallery' && (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {data.gallery.map((img: any) => (
+            {data.gallery.filter((img: any) => img.category !== 'Merchandise').map((img: any) => (
               <div key={img.id} className="group relative bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
                 <div>
                   <div className="relative overflow-hidden rounded-xl mb-3">
@@ -1166,7 +1280,208 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
             )}
           </div>
         )}
+
+        {activeView === 'merchandise' && (
+          <div className="space-y-6">
+            <div className="bg-cream/20 p-6 rounded-3xl border border-gold/15 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="text-lg font-serif font-black text-navy">Fundraising Store Product Inventory</h3>
+                <p className="text-xs text-gray-500 font-sans">Toggle stock levels, update photos, descriptions, sizes, or prices instantly.</p>
+              </div>
+              <button onClick={openAddMerchProduct} className="bg-gold hover:bg-gold-light text-navy px-5 py-2.5 rounded-xl font-bold flex items-center space-x-2 text-sm shadow-sm transition-all hover:scale-[1.02]">
+                <Plus className="h-4 w-4" /> <span>Add Product</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data.gallery.filter((item: any) => item.category === 'Merchandise').map((img: any) => {
+                let details: any = {};
+                try {
+                  details = JSON.parse(img.caption || '{}');
+                } catch {
+                  details = { title: img.caption || 'Official Merch', price: 15, description: '', variants: 'S, M, L, XL', in_stock: true };
+                }
+                const title = details.title || img.caption || 'Official Merchandise';
+                const price = typeof details.price === 'number' ? details.price : parseFloat(details.price) || 15;
+                const variants = details.variants || 'S, M, L, XL';
+                const in_stock = details.in_stock !== false;
+
+                return (
+                  <div key={img.id} className="bg-white rounded-3xl overflow-hidden border border-navy/5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between">
+                    <div className="relative aspect-square overflow-hidden bg-cream/10">
+                      <img src={img.url} alt={title} className="w-full h-full object-cover" />
+                      <div className="absolute top-3 right-3 flex gap-2">
+                        <button 
+                          onClick={() => openEditMerchProduct(img)}
+                          className="bg-navy text-white p-2.5 rounded-full shadow hover:scale-110 transition-transform cursor-pointer"
+                          title="Edit product info/price"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => deleteItem('gallery', img.id)}
+                          className="bg-red-500 text-white p-2.5 rounded-full shadow hover:scale-110 transition-transform cursor-pointer"
+                          title="Remove product"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className={`absolute bottom-3 left-3 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md ${in_stock ? 'bg-green-600' : 'bg-red-600'}`}>
+                        {in_stock ? '● In Stock' : '○ Out of stock / Pre-Order'}
+                      </div>
+                    </div>
+                    <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                      <div>
+                        <div className="flex justify-between items-start gap-2">
+                          <h4 className="font-bold text-navy text-lg line-clamp-1">{title}</h4>
+                          <span className="font-extrabold text-gold text-lg font-sans bg-gold/5 px-2.5 py-0.5 rounded-md">${price}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2 line-clamp-2 min-h-[2rem] leading-relaxed">{details.description || 'Fundraising product supporting kids.'}</p>
+                        <div className="mt-4 pt-3 border-t border-gray-50 flex flex-col gap-1 text-[11px] font-semibold text-gray-500 font-sans">
+                          <div>Variants: <strong className="text-navy">{variants}</strong></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {data.gallery.filter((item: any) => item.category === 'Merchandise').length === 0 && (
+                <div className="col-span-full bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm space-y-3 max-w-sm mx-auto">
+                  <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mx-auto text-gold text-lg">👕</div>
+                  <h4 className="text-base font-bold text-navy">No products uploaded yet</h4>
+                  <p className="text-xs text-gray-500 font-sans">Our default items are displaying user-side. Create your first marketplace product here to manage live prices and stock state!</p>
+                  <button onClick={openAddMerchProduct} className="bg-gold hover:bg-gold-light text-navy text-xs font-bold px-5 py-2.5 rounded-xl mt-2 transition-all shadow-sm">
+                    Create Product
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Merchandise Product Management Modal Overlay */}
+      {isMerchModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4 font-sans">
+          <div className="bg-white rounded-[2rem] p-8 w-full max-w-lg border border-navy/5 shadow-2xl relative text-left">
+            <button 
+              onClick={() => setIsMerchModalOpen(false)}
+              className="absolute top-5 right-5 text-gray-400 hover:text-navy hover:scale-105 transition-all text-sm font-bold bg-gray-100 p-2 rounded-full cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-2xl font-serif font-bold text-navy mb-1 italic">
+              {editingMerchId ? 'Edit Merchandise Product' : 'Add Merchandise Product'}
+            </h3>
+            <p className="text-xs text-gray-500 mb-6">Enter fundraising items details. Information will be saved securely to Supabase.</p>
+
+            <form onSubmit={handleSaveMerchProduct} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Product Title</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={merchForm.title}
+                  onChange={(e) => setMerchForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm" 
+                  placeholder="e.g. WILL-NAKS Heavy Hoodie" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Price (USD)</label>
+                  <input 
+                    required 
+                    type="number" 
+                    min="1"
+                    value={merchForm.price}
+                    onChange={(e) => setMerchForm(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Stock Level</label>
+                  <select 
+                    value={merchForm.in_stock ? 'true' : 'false'}
+                    onChange={(e) => setMerchForm(prev => ({ ...prev, in_stock: e.target.value === 'true' }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm"
+                  >
+                    <option value="true">In Stock</option>
+                    <option value="false">Out of Stock</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Size / Color Variants</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={merchForm.variants}
+                  onChange={(e) => setMerchForm(prev => ({ ...prev, variants: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm" 
+                  placeholder="e.g. S, M, L, XL" 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Short Description</label>
+                <textarea 
+                  required 
+                  value={merchForm.description}
+                  onChange={(e) => setMerchForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm h-20 resize-none" 
+                  placeholder="Describe the apparel or item detail..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Product Photo</label>
+                {merchForm.url ? (
+                  <div className="relative w-28 h-28 rounded-xl overflow-hidden border">
+                    <img src={merchForm.url} alt="Uploaded" className="w-full h-full object-cover" />
+                    <button 
+                      type="button" 
+                      onClick={() => setMerchForm(prev => ({ ...prev, url: '' }))}
+                      className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full shadow hover:scale-105"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gold transition-colors bg-gray-50 hover:bg-white">
+                      <div className="flex flex-col items-center justify-center pt-3 pb-3">
+                        <Plus className="h-6 w-6 text-gray-400 mb-1" />
+                        <p className="text-xs text-gray-400 font-medium">Click to upload product image</p>
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleMerchImageSelect} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+                )}
+                {uploadingMerchImage && (
+                  <div className="text-[10px] text-gold font-bold uppercase animate-pulse">Uploading product image to Supabase Bucket...</div>
+                )}
+              </div>
+
+              <button 
+                type="submit"
+                disabled={uploadingMerchImage}
+                className="w-full py-4 bg-navy text-white rounded-2xl font-bold hover:bg-navy/95 transition-all text-sm mt-4 disabled:opacity-50"
+              >
+                {editingMerchId ? 'Save Product Customizations' : 'Create Live Fundraising Product'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

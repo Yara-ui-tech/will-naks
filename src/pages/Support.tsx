@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Handshake, Users, GraduationCap, CheckCircle2, Upload, Trash2, ShoppingBag } from 'lucide-react';
+import { Heart, Handshake, Users, GraduationCap, CheckCircle2, Upload, Trash2, ShoppingBag, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 type SupportType = 'donate' | 'partner' | 'volunteer' | 'scholarship' | 'shop';
@@ -16,6 +16,105 @@ export default function Support() {
     }
     return 'donate';
   });
+
+  const [products, setProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState('');
+
+  const fetchProducts = async () => {
+    try {
+      const { data } = await supabase
+        .from('gallery')
+        .select('*')
+        .eq('category', 'Merchandise');
+      
+      const defaultProducts = [
+        {
+          id: 'def-1',
+          url: '/assets/products.png',
+          title: 'WILL-NAKS Branded Classic Tee',
+          price: 15,
+          description: 'Elegant navy soft tee with metallic gold foundation crest.',
+          variants: 'S, M, L, XL, XXL',
+          in_stock: true
+        },
+        {
+          id: 'def-2',
+          url: '/assets/products.png',
+          title: 'WILL-NAKS Premium Heavyweight Hoodie',
+          price: 35,
+          description: 'Premium fleece core hoodie with adjustable custom gold tipped toggle.',
+          variants: 'S, M, L, XL',
+          in_stock: true
+        },
+        {
+          id: 'def-3',
+          url: '/assets/products.png',
+          title: 'WILL-NAKS Structured Embroidered Cap',
+          price: 12,
+          description: 'Solid curved brim snapback with stitched metallic crest.',
+          variants: 'Adjustable Snapback',
+          in_stock: true
+        },
+        {
+          id: 'def-4',
+          url: '/assets/products.png',
+          title: 'Harare Handcrafted Canvas Tote',
+          price: 10,
+          description: 'Heavy duty premium woven cotton tote handpainted by young local artisans in Sunningdale, Harare.',
+          variants: 'One Size',
+          in_stock: true
+        },
+        {
+          id: 'def-5',
+          url: '/assets/products.png',
+          title: 'Fundraising Supporter Bundle',
+          price: 50,
+          description: 'Our full commemorative kit representing elite-level support (Classic Tee + Premium Hoodie + Embroidered Cap).',
+          variants: 'Custom sizes selection',
+          in_stock: true
+        }
+      ];
+
+      if (data && data.length > 0) {
+        const parsed = data.map((item: any) => {
+          try {
+            const details = JSON.parse(item.caption || '{}');
+            return {
+              id: item.id,
+              url: item.url,
+              title: details.title || 'Official Merchandise',
+              price: typeof details.price === 'number' ? details.price : parseFloat(details.price) || 15,
+              description: details.description || '',
+              variants: details.variants || 'S, M, L, XL',
+              in_stock: details.in_stock !== false
+            };
+          } catch {
+            return {
+              id: item.id,
+              url: item.url,
+              title: item.caption || 'Special Merch Item',
+              price: 15,
+              description: 'Official WILL-NAKS Fundraiser Merch',
+              variants: 'One Size',
+              in_stock: true
+            };
+          }
+        });
+        setProducts(parsed);
+      } else {
+        setProducts(defaultProducts);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch merchandise from DB:', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   useEffect(() => {
     if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship', 'shop'].includes(tabParam)) {
@@ -34,6 +133,42 @@ export default function Support() {
 
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Scholarship Attachments States
+  const [birthCertUrl, setBirthCertUrl] = useState<string | null>(null);
+  const [uploadingBirthCert, setUploadingBirthCert] = useState(false);
+  const [academicReportUrl, setAcademicReportUrl] = useState<string | null>(null);
+  const [uploadingAcademicReport, setUploadingAcademicReport] = useState(false);
+  const [applicantPhotoUrl, setApplicantPhotoUrl] = useState<string | null>(null);
+  const [uploadingApplicantPhoto, setUploadingApplicantPhoto] = useState(false);
+  const [hardshipLetterUrl, setHardshipLetterUrl] = useState<string | null>(null);
+  const [uploadingHardshipLetter, setUploadingHardshipLetter] = useState(false);
+
+  const uploadScholarshipFile = async (file: File, typeLabel: string, setUrl: (url: string | null) => void, setUploading: (u: boolean) => void) => {
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `scholarship-${typeLabel}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `scholarships/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      setUrl(data.publicUrl);
+    } catch (err: any) {
+      alert(`Failed to upload ${typeLabel}: ` + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
@@ -106,6 +241,8 @@ export default function Support() {
         // Custom composite mapping to capture the missing fields in the standard schema
         const compositeNationality = `${data.nationality || 'Zimbabwean'} [Address: ${data.home_address || 'N/A'}]`;
         const compositeSubjectsStrength = `${data.subjects_strength || ''} [PrevResult: ${data.previous_result || 'N/A'}]`;
+        const carerText = data.carer_details ? (data.carer_details as string) : '';
+        const compositeCarerDetails = `${carerText} [BirthCert: ${birthCertUrl || ''}] [Transcript: ${academicReportUrl || ''}] [Photo: ${applicantPhotoUrl || ''}] [HardshipLetter: ${hardshipLetterUrl || ''}]`;
 
         const { error } = await supabase.from('scholarships').insert([{
           full_name: data.full_name,
@@ -125,7 +262,7 @@ export default function Support() {
           monthly_income: data.monthly_income || null,
           dependants_count: dependants_count,
           is_orphan: is_orphan,
-          carer_details: data.carer_details || null,
+          carer_details: compositeCarerDetails,
           subjects_strength: compositeSubjectsStrength,
           career_aspirations: data.career_aspirations || null,
           chosen_programs: chosen_programs.length > 0 ? chosen_programs : null
@@ -574,10 +711,217 @@ export default function Support() {
                       </div>
                     </div>
 
-                    {/* SECTION E DECLARATION */}
-                    <div className="space-y-4">
+                    {/* SECTION E: DOCUMENT UPLOADS */}
+                    <div className="space-y-6">
                       <div className="border-b border-gold/20 pb-2">
                         <span className="text-[10px] font-bold text-gold uppercase tracking-wider block">Section E</span>
+                        <h3 className="text-lg font-serif font-bold text-navy">Supporting Documents Upload</h3>
+                        <p className="text-xs text-gray-400 mt-1">Please provide clear copies of official documents to authenticate your hardship status and academic claims.</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Birth Certificate upload box */}
+                        <div className="bg-cream/15 border border-gold/10 p-5 rounded-2xl flex flex-col justify-between space-y-4">
+                          <div>
+                            <span className="text-xs font-bold text-navy block">Copy of Birth Certificate / Gov ID <span className="text-red-500">*</span></span>
+                            <p className="text-[10px] text-gray-500 mt-0.5 font-sans">Official identification of the student for legal verification.</p>
+                          </div>
+                          
+                          {birthCertUrl ? (
+                            <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl border border-green-200">
+                              <div className="flex items-center space-x-2.5 truncate">
+                                <span className="text-green-600 text-xs font-semibold">✓ Attached successfully</span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => setBirthCertUrl(null)} 
+                                className="text-red-500 hover:text-red-650 text-xs font-bold"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="border border-dashed border-gray-200 hover:border-gold rounded-xl p-4 text-center relative bg-white transition-all">
+                              <input 
+                                type="file" 
+                                accept="image/*,application/pdf" 
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    uploadScholarshipFile(e.target.files[0], 'birth-cert', setBirthCertUrl, setUploadingBirthCert);
+                                  }
+                                }} 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                disabled={uploadingBirthCert}
+                              />
+                              <div className="space-y-1">
+                                <div className="flex justify-center">
+                                  {uploadingBirthCert ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gold"></div>
+                                  ) : (
+                                    <Upload className="h-5 w-5 text-gray-400" />
+                                  )}
+                                </div>
+                                <p className="text-xs font-semibold text-gray-500">
+                                  {uploadingBirthCert ? 'Uploading...' : 'Choose Birth Cert Copy'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Academic Report Card upload box */}
+                        <div className="bg-cream/15 border border-gold/10 p-5 rounded-2xl flex flex-col justify-between space-y-4">
+                          <div>
+                            <span className="text-xs font-bold text-navy block">Last Term's Academic Report Card <span className="text-red-500">*</span></span>
+                            <p className="text-[10px] text-gray-500 mt-0.5 font-sans">Official term report card stating marks & term overview.</p>
+                          </div>
+                          
+                          {academicReportUrl ? (
+                            <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl border border-green-200">
+                              <div className="flex items-center space-x-2.5 truncate">
+                                <span className="text-green-600 text-xs font-semibold">✓ Attached successfully</span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => setAcademicReportUrl(null)} 
+                                className="text-red-500 hover:text-red-650 text-xs font-bold"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="border border-dashed border-gray-200 hover:border-gold rounded-xl p-4 text-center relative bg-white transition-all">
+                              <input 
+                                type="file" 
+                                accept="image/*,application/pdf" 
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    uploadScholarshipFile(e.target.files[0], 'academic-report', setAcademicReportUrl, setUploadingAcademicReport);
+                                  }
+                                }} 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                disabled={uploadingAcademicReport}
+                              />
+                              <div className="space-y-1">
+                                <div className="flex justify-center">
+                                  {uploadingAcademicReport ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gold"></div>
+                                  ) : (
+                                    <Upload className="h-5 w-5 text-gray-400" />
+                                  )}
+                                </div>
+                                <p className="text-xs font-semibold text-gray-500">
+                                  {uploadingAcademicReport ? 'Uploading...' : 'Choose Academic Report Copy'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Applicant Portrait Photo upload box */}
+                        <div className="bg-cream/15 border border-gold/10 p-5 rounded-2xl flex flex-col justify-between space-y-4">
+                          <div>
+                            <span className="text-xs font-bold text-navy block">Applicant Portrait Photo (Optional)</span>
+                            <p className="text-[10px] text-gray-500 mt-0.5 font-sans">Clear front-facing portrait of student applicant.</p>
+                          </div>
+                          
+                          {applicantPhotoUrl ? (
+                            <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl border border-green-200">
+                              <div className="flex items-center space-x-2.5 truncate">
+                                <span className="text-green-600 text-xs font-semibold">✓ Attached successfully</span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => setApplicantPhotoUrl(null)} 
+                                className="text-red-500 hover:text-red-650 text-xs font-bold"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="border border-dashed border-gray-200 hover:border-gold rounded-xl p-4 text-center relative bg-white transition-all">
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    uploadScholarshipFile(e.target.files[0], 'applicant-photo', setApplicantPhotoUrl, setUploadingApplicantPhoto);
+                                  }
+                                }} 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                disabled={uploadingApplicantPhoto}
+                              />
+                              <div className="space-y-1">
+                                <div className="flex justify-center">
+                                  {uploadingApplicantPhoto ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gold"></div>
+                                  ) : (
+                                    <Upload className="h-5 w-5 text-gray-400" />
+                                  )}
+                                </div>
+                                <p className="text-xs font-semibold text-gray-500">
+                                  {uploadingApplicantPhoto ? 'Uploading...' : 'Choose Student Photograph'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Guardian Hardship Letter upload box */}
+                        <div className="bg-cream/15 border border-gold/10 p-5 rounded-2xl flex flex-col justify-between space-y-4">
+                          <div>
+                            <span className="text-xs font-bold text-navy block">Hardship Substantiation Letter (Optional)</span>
+                            <p className="text-[10px] text-gray-500 mt-0.5 font-sans">A signed guardian statement, death cert (orphan) or welfare slips.</p>
+                          </div>
+                          
+                          {hardshipLetterUrl ? (
+                            <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl border border-green-200">
+                              <div className="flex items-center space-x-2.5 truncate">
+                                <span className="text-green-600 text-xs font-semibold">✓ Attached successfully</span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => setHardshipLetterUrl(null)} 
+                                className="text-red-500 hover:text-red-650 text-xs font-bold"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="border border-dashed border-gray-200 hover:border-gold rounded-xl p-4 text-center relative bg-white transition-all">
+                              <input 
+                                type="file" 
+                                accept="image/*,application/pdf" 
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    uploadScholarshipFile(e.target.files[0], 'hardship-letter', setHardshipLetterUrl, setUploadingHardshipLetter);
+                                  }
+                                }} 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                disabled={uploadingHardshipLetter}
+                              />
+                              <div className="space-y-1">
+                                <div className="flex justify-center">
+                                  {uploadingHardshipLetter ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gold"></div>
+                                  ) : (
+                                    <Upload className="h-5 w-5 text-gray-400" />
+                                  )}
+                                </div>
+                                <p className="text-xs font-semibold text-gray-500">
+                                  {uploadingHardshipLetter ? 'Uploading...' : 'Choose Letter or Hardship Proof'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION F DECLARATION */}
+                    <div className="space-y-4">
+                      <div className="border-b border-gold/20 pb-2">
+                        <span className="text-[10px] font-bold text-gold uppercase tracking-wider block">Section F</span>
                         <h3 className="text-lg font-serif font-bold text-navy">Declaration Agreements</h3>
                       </div>
                       <div className="p-4 bg-navy/[0.02] border border-gold/15 rounded-2xl space-y-3 text-xs text-gray-500 leading-relaxed font-sans">
@@ -594,45 +938,138 @@ export default function Support() {
 
                     <button 
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || uploadingBirthCert || uploadingAcademicReport || uploadingApplicantPhoto || uploadingHardshipLetter}
                       className="w-full py-5 bg-gold text-navy rounded-2xl font-bold text-xl hover:bg-gold-light transition-all disabled:opacity-50"
                     >
-                      {loading ? 'Processing Assessment Intake...' : 'Submit Beneficiary Application'}
+                      {loading ? 'Processing Assessment Intake...' : 
+                       (uploadingBirthCert || uploadingAcademicReport || uploadingApplicantPhoto || uploadingHardshipLetter) ? 'Uploading Supporting Files...' :
+                       (!birthCertUrl || !academicReportUrl) ? 'Please Upload Required Documents (Birth Cert & Report Card)' :
+                       'Submit Beneficiary Application'}
                     </button>
                   </form>
                 )}
 
                 {activeTab === 'shop' && (
-                  <div className="space-y-12 text-left">
-                    <div className="text-center max-w-2xl mx-auto mb-8">
+                  <div className="space-y-16 text-left">
+                    <div className="text-center max-w-2xl mx-auto mb-12">
                       <h2 className="text-3xl font-serif font-bold text-navy mb-4 italic font-medium">Fundraising Store</h2>
                       <p className="text-gray-600 text-sm leading-relaxed">
                         Wear the mission, support our children! 100% of the proceeds from our official merchandising sales directly fund school fees, materials, and support systems for exceptional underprivileged students in Zimbabwe.
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-                      {/* Catalog Showcase Image column on the left/top */}
-                      <div className="lg:col-span-5 space-y-6">
-                        <div className="relative group bg-cream/25 p-4 rounded-3xl border border-gold/15 overflow-hidden shadow-xl">
-                          <div className="absolute top-3 left-3 bg-gold text-navy text-[10px] font-bold uppercase py-1 px-3.5 rounded-full z-10 shadow-sm">
-                            Official Merchandise
-                          </div>
-                          <img 
-                            src="/assets/products.png" 
-                            alt="WILL-NAKS Fundraising Products" 
-                            className="w-full h-auto rounded-2xl shadow-inner transition-transform duration-500 group-hover:scale-[1.02]"
-                            referrerPolicy="no-referrer"
-                          />
+                    {/* Products Grid Section */}
+                    <div className="space-y-8">
+                      <div className="flex flex-col sm:flex-row justify-between items-center bg-cream/20 border border-gold/15 p-6 rounded-3xl gap-4">
+                        <div className="text-left font-sans">
+                          <p className="font-bold text-navy text-sm uppercase tracking-wider">Full Catalog Available</p>
+                          <p className="text-xs text-gray-500">We suggest downloading our composite catalog sheet for physical printing or offline reference.</p>
                         </div>
-                        <div className="bg-navy/[0.02] border border-navy/5 p-6 rounded-2xl text-xs space-y-3 text-gray-500 font-sans">
-                          <p className="font-bold text-navy uppercase text-[10px] tracking-wider">How to purchase:</p>
-                          <ol className="list-decimal pl-4 space-y-1.5">
-                            <li>Review the products catalog shown above.</li>
-                            <li>Select your preferred items, sizes/variants, and desired quantities in the order form.</li>
-                            <li>Complete the inquiry details with your contact info.</li>
-                            <li>Our team will contact you directly via Email, WhatsApp, or Phone to finalize local payment and Harare delivery options.</li>
+                        <button
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = '/assets/products.png';
+                            link.download = 'will_naks_merchandise_catalog.png';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                          className="flex items-center space-x-2 bg-navy hover:bg-navy/95 text-white font-bold text-xs uppercase px-5 py-3 rounded-xl shadow transition-all hover:scale-[1.02] active:scale-95"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span>Download Full Catalog Image</span>
+                        </button>
+                      </div>
+
+                      {loadingProducts ? (
+                        <div className="flex justify-center py-12">
+                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold"></div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                          {products.map((p) => (
+                            <div key={p.id} className="group bg-white rounded-3xl overflow-hidden border border-navy/5 shadow-md flex flex-col justify-between hover:shadow-xl transition-all duration-300">
+                              <div className="relative aspect-square overflow-hidden bg-cream/10">
+                                <img
+                                  src={p.url}
+                                  alt={p.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800';
+                                  }}
+                                />
+                                <div className="absolute top-3 right-3 bg-gold/90 backdrop-blur-sm text-navy text-xs font-black py-1 px-3.5 rounded-full shadow">
+                                  ${p.price}
+                                </div>
+                                {!p.in_stock && (
+                                  <div className="absolute inset-0 bg-navy/60 backdrop-blur-[2px] flex items-center justify-center">
+                                    <span className="bg-red-500 text-white font-bold text-xs uppercase px-4 py-1.5 rounded-full tracking-wider shadow">
+                                      Pre-Order Only
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                                <div>
+                                  <h3 className="font-serif font-bold text-lg text-navy line-clamp-1">{p.title}</h3>
+                                  <p className="text-xs text-gray-500 line-clamp-2 mt-1 min-h-[2rem] leading-relaxed">{p.description}</p>
+                                  <div className="mt-3 flex items-center justify-between text-[11px] font-semibold text-gray-400 font-sans">
+                                    <span>Sizes/Variants: <strong className="text-navy">{p.variants}</strong></span>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 pt-2">
+                                  <button
+                                    onClick={() => {
+                                      const link = document.createElement('a');
+                                      link.href = p.url;
+                                      link.target = '_blank';
+                                      link.download = `${p.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_product.png`;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                    }}
+                                    className="flex items-center justify-center space-x-1 border border-navy/10 hover:border-gold hover:bg-cream/10 text-gray-600 hover:text-navy text-xs font-bold py-2.5 rounded-xl transition-all"
+                                    title="Download image of this product"
+                                  >
+                                    <Download className="h-4.5 w-4.5" />
+                                    <span>Download Image</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedProduct(`${p.title} ($${p.price})`);
+                                      const formElement = document.getElementById('shop-inquiry-form');
+                                      if (formElement) {
+                                        formElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                      }
+                                    }}
+                                    className="flex items-center justify-center space-x-1.5 bg-navy hover:bg-navy/95 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-sm"
+                                  >
+                                    <ShoppingBag className="h-4.5 w-4.5" />
+                                    <span>Order/Inquire</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start" id="shop-inquiry-form">
+                      {/* Left: instruction info */}
+                      <div className="lg:col-span-5 space-y-6">
+                        <div className="bg-navy/[0.02] border border-navy/5 p-8 rounded-3xl text-xs space-y-4 text-gray-500 font-sans shadow-sm">
+                          <p className="font-black text-navy uppercase text-[11px] tracking-wider mb-2">How our fundraising store purchase works:</p>
+                          <ol className="list-decimal pl-4 space-y-2.5 text-gray-600 leading-relaxed text-xs">
+                            <li>Review the dynamic products catalog shown above.</li>
+                            <li>Click <strong>Order/Inquire</strong> on your chosen merchandise item to prefill it into the form, or select manually.</li>
+                            <li>Fill out your contact details, required size variants, and desired quantities.</li>
+                            <li>Our team will contact you directly via Email, WhatsApp, or Phone to finalize local payment and Harare delivery/pickup options.</li>
                           </ol>
+                          <div className="bg-gold/10 p-3.5 rounded-xl border border-gold/15 text-navy font-bold text-[10px] uppercase tracking-wider mt-4">
+                            100% of fundraising merchandise sales directly fund student education fees in Zimbabwe.
+                          </div>
                         </div>
                       </div>
 
@@ -654,13 +1091,19 @@ export default function Support() {
                           <div className="grid md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Select Product</label>
-                              <select required name="product_name" className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans">
+                              <select 
+                                required 
+                                name="product_name"
+                                value={selectedProduct}
+                                onChange={(e) => setSelectedProduct(e.target.value)}
+                                className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans"
+                              >
                                 <option value="">Choose an item...</option>
-                                <option value="WILL-NAKS Branded Classic Tee ($15)">WILL-NAKS Branded Classic Tee ($15)</option>
-                                <option value="WILL-NAKS Premium Heavyweight Hoodie ($35)">WILL-NAKS Premium Heavyweight Hoodie ($35)</option>
-                                <option value="WILL-NAKS Structured Embroidered Cap ($12)">WILL-NAKS Structured Embroidered Cap ($12)</option>
-                                <option value="Harare Handcrafted Canvas Tote ($10)">Harare Handcrafted Canvas Tote ($10)</option>
-                                <option value="Fundraising Supporter bundle ($50)">Fundraising Supporter Bundle (Tee + Hoodie + Cap) ($50)</option>
+                                {products.map((p) => (
+                                  <option key={p.id} value={`${p.title} ($${p.price})`}>
+                                    {p.title} (${p.price})
+                                  </option>
+                                ))}
                                 <option value="Other / Multi-select item in notes">Other / Mentioned in Notes</option>
                               </select>
                             </div>
