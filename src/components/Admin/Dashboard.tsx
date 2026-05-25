@@ -20,15 +20,17 @@ import {
   Star,
   Share2,
   Users2,
-  ArrowLeft
+  ArrowLeft,
+  DollarSign
 } from 'lucide-react';
 
-type View = 'overview' | 'donations' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages';
+type View = 'overview' | 'donations' | 'deductions' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages';
 
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<View>('overview');
   const [data, setData] = useState<any>({
     donations: [],
+    deductions: [],
     scholarships: [],
     partners: [],
     volunteers: [],
@@ -62,7 +64,7 @@ export default function AdminDashboard() {
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles, team, events, impact, social, members, messages] = await Promise.all([
+      const [donations, scholarships, partners, volunteers, news, gallery, testimonials, profiles, team, events, impact, social, members, messages, deductions] = await Promise.all([
         supabase.from('donations').select('*').order('created_at', { ascending: false }),
         supabase.from('scholarships').select('*').order('created_at', { ascending: false }),
         supabase.from('partners').select('*').order('created_at', { ascending: false }),
@@ -76,7 +78,8 @@ export default function AdminDashboard() {
         supabase.from('impact_stories').select('*').order('created_at', { ascending: false }),
         supabase.from('social_links').select('*').order('platform', { ascending: true }),
         supabase.from('members').select('*').order('created_at', { ascending: false }),
-        supabase.from('contacts').select('*').order('created_at', { ascending: false })
+        supabase.from('contacts').select('*').order('created_at', { ascending: false }),
+        supabase.from('deductions').select('*').order('created_at', { ascending: false })
       ]);
 
       let teamList = team.data || [];
@@ -120,10 +123,14 @@ export default function AdminDashboard() {
       if (social.error) errors.push(`Social Links: ${social.error.message}`);
       if (members.error) errors.push(`Members: ${members.error.message}`);
       if (messages.error) errors.push(`Inbox Messages (contacts): ${messages.error.message}`);
-      setFetchErrors(errors);
+      
+      if (deductions.error) {
+        console.warn('Deductions table fetch error (expected if table not created yet):', deductions.error.message);
+      }
 
       setData({
         donations: donations.data || [],
+        deductions: deductions.data || [],
         scholarships: scholarships.data || [],
         partners: partners.data || [],
         volunteers: volunteers.data || [],
@@ -307,6 +314,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const addDeduction = async () => {
+    const amountStr = prompt('Deduction Amount ($):');
+    if (!amountStr) return;
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid positive number for amount');
+      return;
+    }
+    const purpose = prompt('Purpose / Use of funds (e.g. Purchased school textbooks, paid term tuition fees):');
+    if (!purpose) return;
+    const recipient = prompt('Recipient of money (optional, e.g. Harare High School, Bookstore):') || 'N/A';
+    const project_lead = prompt('Project Lead / Approved By (optional):') || 'N/A';
+
+    const { error } = await supabase.from('deductions').insert([{ amount, purpose, recipient, project_lead }]);
+    if (error) {
+      alert(`Error inserting deduction record: ${error.message}\n\nMake sure you have run the Deductions table setup SQL block first.`);
+    }
+    fetchData(true);
+  };
+
   const toggleSocialActive = async (id: string, current: boolean) => {
     const { error } = await supabase.from('social_links').update({ is_active: !current }).eq('id', id);
     if (error) alert(`Error updating link: ${error.message}`);
@@ -366,6 +393,7 @@ export default function AdminDashboard() {
         <nav className="flex-1 space-y-2 overflow-y-auto pr-2 pb-8 scrollbar-hide">
           <NavItem active={activeView === 'overview'} onClick={() => { setActiveView('overview'); setIsSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" />
           <NavItem active={activeView === 'donations'} onClick={() => { setActiveView('donations'); setIsSidebarOpen(false); }} icon={Heart} label="Donations" />
+          <NavItem active={activeView === 'deductions'} onClick={() => { setActiveView('deductions'); setIsSidebarOpen(false); }} icon={DollarSign} label="Fund Deductions" />
           <NavItem active={activeView === 'scholarships'} onClick={() => { setActiveView('scholarships'); setIsSidebarOpen(false); }} icon={GraduationCap} label="Scholarships" />
           <NavItem active={activeView === 'partners'} onClick={() => { setActiveView('partners'); setIsSidebarOpen(false); }} icon={Handshake} label="Partners" />
           <NavItem active={activeView === 'volunteers'} onClick={() => { setActiveView('volunteers'); setIsSidebarOpen(false); }} icon={UserPlus} label="Volunteers" />
@@ -425,6 +453,11 @@ export default function AdminDashboard() {
             {activeView === 'gallery' && (
               <button onClick={addToGallery} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
                 <Plus className="h-4 w-4" /> <span>Add Photo</span>
+              </button>
+            )}
+            {activeView === 'deductions' && (
+              <button onClick={addDeduction} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Deduction</span>
               </button>
             )}
             {activeView === 'news' && (
@@ -524,22 +557,92 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
         {activeView === 'overview' && <OverviewStats data={data} />}
         
         {activeView === 'donations' && (
-          <Table headers={['Date', 'Donor Name', 'Email', 'Amount', 'Status', 'Actions']}>
-            {data.donations.map((d: any) => (
-              <tr key={d.id} className="border-b text-sm">
-                <td className="p-4">{new Date(d.created_at).toLocaleDateString()}</td>
-                <td className="p-4 font-bold text-navy">{d.donor_name || 'Anonymous'}</td>
-                <td className="p-4 text-xs text-gray-500 font-mono">{d.email || 'N/A'}</td>
-                <td className="p-4 font-bold text-green-600">${d.amount}</td>
-                <td className="p-4 uppercase text-xs font-bold text-gold">{d.payment_status}</td>
-                <td className="p-4">
-                  <button onClick={() => deleteItem('donations', d.id)} className="text-red-400 hover:text-red-500 transition-colors">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </Table>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Fund Deposited / Received</span>
+                <span className="text-3xl font-bold text-green-600">${data.donations.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0).toLocaleString()}</span>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Fund Deducted / Spent</span>
+                <span className="text-3xl font-bold text-red-500">${data.deductions.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0).toLocaleString()}</span>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Amount Remaining (Left)</span>
+                <span className="text-3xl font-bold text-navy">${(data.donations.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0) - data.deductions.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0)).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <Table headers={['Date', 'Donor Name', 'Email', 'Amount', 'Status', 'Actions']}>
+              {data.donations.map((d: any) => (
+                <tr key={d.id} className="border-b text-sm">
+                  <td className="p-4">{new Date(d.created_at).toLocaleDateString()}</td>
+                  <td className="p-4 font-bold text-navy">{d.donor_name || 'Anonymous'}</td>
+                  <td className="p-4 text-xs text-gray-500 font-mono">{d.email || 'N/A'}</td>
+                  <td className="p-4 font-bold text-green-600">${d.amount}</td>
+                  <td className="p-4 uppercase text-xs font-bold text-gold">{d.payment_status}</td>
+                  <td className="p-4">
+                    <button onClick={() => deleteItem('donations', d.id)} className="text-red-400 hover:text-red-500 transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </div>
+        )}
+
+        {activeView === 'deductions' && (
+          <div className="space-y-6">
+            <div className="bg-amber-50/50 border border-amber-200/60 p-6 rounded-[2rem] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="font-bold text-navy text-lg flex items-center gap-2">
+                  <span>💡</span> <span>Fund Disbursement Tracker</span>
+                </h3>
+                <p className="text-gray-500 text-xs mt-1 leading-relaxed">
+                  Record and oversee scholarship payments, project costs, administrative supplies, and other program expenses directly subtracted from donations.
+                </p>
+              </div>
+              <button 
+                onClick={addDeduction}
+                className="px-4 py-2 bg-gold hover:bg-gold/90 text-navy font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm"
+              >
+                + Record Deduction
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Total Budget Received</span>
+                <span className="text-3xl font-bold text-green-600">${data.donations.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0).toLocaleString()}</span>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Total Amount Deducted</span>
+                <span className="text-3xl font-bold text-red-500">${data.deductions.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0).toLocaleString()}</span>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Net Remaining Funds</span>
+                <span className="text-3xl font-bold text-navy">${(data.donations.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0) - data.deductions.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0)).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <Table headers={['Date', 'Use of Money (Purpose)', 'Target Recipient', 'Approved By / Lead', 'Amount Deducted', 'Actions']}>
+              {data.deductions.map((dec: any) => (
+                <tr key={dec.id} className="border-b text-sm">
+                  <td className="p-4 text-xs font-mono text-gray-500">{new Date(dec.created_at).toLocaleDateString()}</td>
+                  <td className="p-4 font-bold text-navy max-w-sm">{dec.purpose}</td>
+                  <td className="p-4 font-medium text-gray-600">{dec.recipient || 'N/A'}</td>
+                  <td className="p-4 text-xs font-mono text-gray-500">{dec.project_lead || 'N/A'}</td>
+                  <td className="p-4 font-bold text-red-600">-${Number(dec.amount).toLocaleString()}</td>
+                  <td className="p-4 font-bold">
+                    <button onClick={() => deleteItem('deductions', dec.id)} className="text-red-400 hover:text-red-500 transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </div>
         )}
 
         {activeView === 'scholarships' && (
@@ -920,7 +1023,9 @@ function OverviewStats({ data }: any) {
   const [showPolicies, setShowPolicies] = useState(false);
 
   const stats = [
-    { label: 'Total Donations', value: `$${data.donations.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0)}`, icon: Heart, color: 'bg-red-50 text-red-600' },
+    { label: 'Total Donations', value: `$${data.donations.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0).toLocaleString()}`, icon: Heart, color: 'bg-red-50 text-red-600' },
+    { label: 'Total Deducted', value: `$${(data.deductions || []).reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0).toLocaleString()}`, icon: DollarSign, color: 'bg-amber-5 border border-amber-200 text-amber-600' },
+    { label: 'Funds Left', value: `$${(data.donations.reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0) - (data.deductions || []).reduce((acc: number, d: any) => acc + Number(d.amount || 0), 0)).toLocaleString()}`, icon: DollarSign, color: 'bg-green-50 text-green-600' },
     { label: 'Scholarship Apps', value: data.scholarships.length, icon: GraduationCap, color: 'bg-blue-50 text-blue-600' },
     { label: 'Total Members', value: data.members.length, icon: Users2, color: 'bg-gold/10 text-gold' },
     { label: 'Upcoming Events', value: data.events.length, icon: Calendar, color: 'bg-navy/10 text-navy' },
@@ -950,18 +1055,18 @@ function OverviewStats({ data }: any) {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-navy flex items-center gap-2">
-              <span className="text-xl">📷</span>
-              <span>Supabase Storage Policy Manager</span>
+              <span className="text-xl">🛠️</span>
+              <span>Supabase Database Schema & Storage Manager</span>
             </h3>
             <p className="text-gray-500 text-sm mt-1 leading-relaxed">
-              Ensure you can upload profiles, events, stories, and gallery images seamlessly. Click below to view the latest, most permissive upload policies.
+              Ensure you can upload assets, update partner statuses, and record disbursements seamlessly. Click below to copy the setup script for SQL Editor.
             </p>
           </div>
           <button 
             onClick={() => setShowPolicies(!showPolicies)} 
             className="px-5 py-2.5 bg-navy text-white hover:bg-navy/90 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm shrink-0"
           >
-            {showPolicies ? 'Hide SQL Code' : 'Show SQL Setup Code'}
+            {showPolicies ? 'Hide SQL Code' : 'Show DB Setup Code'}
           </button>
         </div>
 
@@ -969,23 +1074,46 @@ function OverviewStats({ data }: any) {
           <div className="mt-6 border-t border-gray-100 pt-6">
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-950 text-xs text-left mb-4">
               <p className="font-bold flex items-center gap-1.5 mb-1.5 text-amber-900">
-                <span>⚡</span> Quick Instructions:
+                <span>⚡</span> SQL Run Instructions:
               </p>
               <ol className="list-decimal pl-5 space-y-1 text-gray-700 leading-normal">
                 <li>Go to your <strong className="text-navy">Supabase Dashboard</strong>.</li>
                 <li>Click on <strong className="text-navy">SQL Editor</strong> on the left-side panel.</li>
                 <li>Paste the script below into the query window.</li>
-                <li>Click the <strong className="text-navy">Run</strong> button to execute.</li>
+                <li>Click the <strong className="text-navy">Run</strong> button to execute. This instantly updates the schema cache!</li>
               </ol>
             </div>
 
-            <pre className="p-4 bg-gray-900 text-gray-100 border border-gray-800 rounded-2xl text-[11px] font-mono overflow-x-auto select-all max-h-80 scrollbar-thin whitespace-pre leading-normal">
-{`-- 1. Create 'images' bucket if not exists
+            <pre className="p-4 bg-gray-900 text-gray-100 border border-gray-800 rounded-2xl text-[11px] font-mono overflow-x-auto select-all max-h-96 scrollbar-thin whitespace-pre leading-normal">
+{`-- A. FIX MISSING COLUMN error on updates
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+
+-- B. CREATE 'deductions' table for budget disbursement metrics
+CREATE TABLE IF NOT EXISTS public.deductions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  amount NUMERIC NOT NULL,
+  purpose TEXT NOT NULL,
+  recipient TEXT DEFAULT 'N/A',
+  project_lead TEXT DEFAULT 'N/A'
+);
+
+-- Enable RLS for deductions
+ALTER TABLE public.deductions ENABLE ROW LEVEL SECURITY;
+
+-- Allow public viewing of disbursements (transparency)
+DROP POLICY IF EXISTS "Public view deductions" ON public.deductions;
+CREATE POLICY "Public view deductions" ON public.deductions FOR SELECT USING (true);
+
+-- Allow administrators full control
+DROP POLICY IF EXISTS "Admins manage deductions" ON public.deductions;
+CREATE POLICY "Admins manage deductions" ON public.deductions FOR ALL USING (public.is_admin());
+
+-- C. SETUP Storage Bucket and Policies if not present already
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('images', 'images', true)
 ON CONFLICT (id) DO NOTHING;
 
--- 2. Purge old image storage policies to prevent duplicates
 DROP POLICY IF EXISTS "Public View Images" ON storage.objects;
 DROP POLICY IF EXISTS "Admins Manage Images" ON storage.objects;
 DROP POLICY IF EXISTS "Admins Insert Images" ON storage.objects;
@@ -995,23 +1123,15 @@ DROP POLICY IF EXISTS "Public Insert Images" ON storage.objects;
 DROP POLICY IF EXISTS "Public Update Images" ON storage.objects;
 DROP POLICY IF EXISTS "Public Delete Images" ON storage.objects;
 
--- 3. Setup clean fully-permissive policies for images bucket
-CREATE POLICY "Public View Images" ON storage.objects
-  FOR SELECT USING (bucket_id = 'images');
-
-CREATE POLICY "Public Insert Images" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'images');
-
-CREATE POLICY "Public Update Images" ON storage.objects
-  FOR UPDATE USING (bucket_id = 'images');
-
-CREATE POLICY "Public Delete Images" ON storage.objects
-  FOR DELETE USING (bucket_id = 'images');`}
+CREATE POLICY "Public View Images" ON storage.objects FOR SELECT USING (bucket_id = 'images');
+CREATE POLICY "Public Insert Images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'images');
+CREATE POLICY "Public Update Images" ON storage.objects FOR UPDATE USING (bucket_id = 'images');
+CREATE POLICY "Public Delete Images" ON storage.objects FOR DELETE USING (bucket_id = 'images');`}
             </pre>
 
             <div className="mt-3 flex items-center gap-2 text-[10px] text-green-600 font-semibold uppercase tracking-wider">
               <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-              <span>Fully compatible with standard media uploads</span>
+              <span>Fully compatible with standard media uploads + Partner Status updates</span>
             </div>
           </div>
         )}

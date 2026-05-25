@@ -1,7 +1,7 @@
 -- Enable Realtime for all tables safely
 DO $$ 
 DECLARE
-  table_list TEXT[] := ARRAY['contacts', 'donations', 'gallery', 'testimonials', 'profiles', 'scholarships', 'partners', 'volunteers', 'news', 'team', 'events', 'impact_stories', 'members', 'social_links'];
+  table_list TEXT[] := ARRAY['contacts', 'donations', 'gallery', 'testimonials', 'profiles', 'scholarships', 'partners', 'volunteers', 'news', 'team', 'events', 'impact_stories', 'members', 'social_links', 'deductions'];
   t TEXT;
 BEGIN
   FOR t IN SELECT unnest(table_list) LOOP
@@ -377,4 +377,31 @@ CREATE POLICY "Public Update Images" ON storage.objects
 -- Allow anyone to delete images in the public 'images' bucket
 CREATE POLICY "Public Delete Images" ON storage.objects
   FOR DELETE USING (bucket_id = 'images');
+
+
+-- Retroactive fixes to ensure columns exist on historical installations
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+
+
+-- 16. Deductions / Fund Disbursements Table (Transparency Tracker)
+CREATE TABLE IF NOT EXISTS public.deductions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  amount NUMERIC NOT NULL,
+  purpose TEXT NOT NULL,
+  recipient TEXT DEFAULT 'N/A',
+  project_lead TEXT DEFAULT 'N/A'
+);
+
+-- Enable RLS
+ALTER TABLE public.deductions ENABLE ROW LEVEL SECURITY;
+
+-- Allow public viewing of how money is utilized
+DROP POLICY IF EXISTS "Public view deductions" ON public.deductions;
+CREATE POLICY "APublic view deductions" ON public.deductions FOR SELECT USING (true);
+
+-- Allow admins full control over disbursement tracking
+DROP POLICY IF EXISTS "Admins manage deductions" ON public.deductions;
+CREATE POLICY "Admins manage deductions" ON public.deductions FOR ALL USING (public.is_admin());
+
 
