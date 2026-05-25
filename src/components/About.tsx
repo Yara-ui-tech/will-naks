@@ -15,7 +15,7 @@ export default function About() {
           >
             <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl">
               <img 
-                src="/src/assets/images/african_children_classroom_1779718922527.png" 
+                src="/assets/african_children_classroom_1779718922527.png" 
                 alt="Foundation Impact" 
                 className="w-full h-auto"
                 referrerPolicy="no-referrer"

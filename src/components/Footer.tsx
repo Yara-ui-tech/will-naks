@@ -45,6 +45,7 @@ export default function Footer() {
     { name: 'Become a Partner', path: '/support?tab=partner' },
     { name: 'Scholarship App', path: '/support?tab=scholarship' },
     { name: 'Volunteer Signup', path: '/support?tab=volunteer' },
+    { name: 'Fundraising Products', path: '/support?tab=shop' },
     { name: 'News & Blog', path: '/news' },
     { name: 'Admin Portal', path: '/admin' },
   ];

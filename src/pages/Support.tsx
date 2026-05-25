@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Handshake, Users, GraduationCap, CheckCircle2, Upload, Trash2 } from 'lucide-react';
+import { Heart, Handshake, Users, GraduationCap, CheckCircle2, Upload, Trash2, ShoppingBag } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-type SupportType = 'donate' | 'partner' | 'volunteer' | 'scholarship';
+type SupportType = 'donate' | 'partner' | 'volunteer' | 'scholarship' | 'shop';
 
 export default function Support() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   
   const [activeTab, setActiveTab] = useState<SupportType>(() => {
-    if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship'].includes(tabParam)) {
+    if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship', 'shop'].includes(tabParam)) {
       return tabParam as SupportType;
     }
     return 'donate';
   });
 
   useEffect(() => {
-    if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship'].includes(tabParam)) {
+    if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship', 'shop'].includes(tabParam)) {
       setActiveTab(tabParam as SupportType);
     } else if (!tabParam) {
       setActiveTab('donate');
@@ -139,6 +139,19 @@ export default function Support() {
           payment_status: 'pending'
         }]);
         if (error) throw error;
+      } else if (activeTab === 'shop') {
+        const nameVal = (data.full_name as string || '').trim();
+        const names = nameVal.split(/\s+/);
+        const firstName = names[0] || 'Fundraising';
+        const lastName = names.slice(1).join(' ') || 'Supporter';
+        const { error } = await supabase.from('contacts').insert([{
+          first_name: firstName,
+          last_name: lastName,
+          email: data.email,
+          subject: `Fundraising Store Order: ${data.product_name}`,
+          message: `Request for fundraising items:\n- Product: ${data.product_name}\n- Qty: ${data.quantity}\n- Size/Color: ${data.size_variant || 'N/A'}\n- Phone: ${data.phone}\n- Special Requests / Notes:\n${data.notes || 'N/A'}`
+        }]);
+        if (error) throw error;
       }
       
       setSubmitted(true);
@@ -154,6 +167,7 @@ export default function Support() {
     { id: 'partner', label: 'Partner', icon: Handshake },
     { id: 'volunteer', label: 'Volunteer', icon: Users },
     { id: 'scholarship', label: 'Scholarship', icon: GraduationCap },
+    { id: 'shop', label: 'Fundraising Store', icon: ShoppingBag },
   ];
 
   return (
@@ -586,6 +600,103 @@ export default function Support() {
                       {loading ? 'Processing Assessment Intake...' : 'Submit Beneficiary Application'}
                     </button>
                   </form>
+                )}
+
+                {activeTab === 'shop' && (
+                  <div className="space-y-12 text-left">
+                    <div className="text-center max-w-2xl mx-auto mb-8">
+                      <h2 className="text-3xl font-serif font-bold text-navy mb-4 italic font-medium">Fundraising Store</h2>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Wear the mission, support our children! 100% of the proceeds from our official merchandising sales directly fund school fees, materials, and support systems for exceptional underprivileged students in Zimbabwe.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+                      {/* Catalog Showcase Image column on the left/top */}
+                      <div className="lg:col-span-5 space-y-6">
+                        <div className="relative group bg-cream/25 p-4 rounded-3xl border border-gold/15 overflow-hidden shadow-xl">
+                          <div className="absolute top-3 left-3 bg-gold text-navy text-[10px] font-bold uppercase py-1 px-3.5 rounded-full z-10 shadow-sm">
+                            Official Merchandise
+                          </div>
+                          <img 
+                            src="/assets/products.png" 
+                            alt="WILL-NAKS Fundraising Products" 
+                            className="w-full h-auto rounded-2xl shadow-inner transition-transform duration-500 group-hover:scale-[1.02]"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <div className="bg-navy/[0.02] border border-navy/5 p-6 rounded-2xl text-xs space-y-3 text-gray-500 font-sans">
+                          <p className="font-bold text-navy uppercase text-[10px] tracking-wider">How to purchase:</p>
+                          <ol className="list-decimal pl-4 space-y-1.5">
+                            <li>Review the products catalog shown above.</li>
+                            <li>Select your preferred items, sizes/variants, and desired quantities in the order form.</li>
+                            <li>Complete the inquiry details with your contact info.</li>
+                            <li>Our team will contact you directly via Email, WhatsApp, or Phone to finalize local payment and Harare delivery options.</li>
+                          </ol>
+                        </div>
+                      </div>
+
+                      {/* Order Inquiry Form column on the right */}
+                      <div className="lg:col-span-7 bg-cream/15 p-8 rounded-3xl border border-navy/5 shadow-inner">
+                        <h3 className="text-xl font-serif font-bold text-navy mb-6">Merchandise Order Inquiry</h3>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Full Name</label>
+                              <input required name="full_name" type="text" className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Your Name" />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Email Address</label>
+                              <input required name="email" type="email" className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="yourname@example.com" />
+                            </div>
+                          </div>
+
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Select Product</label>
+                              <select required name="product_name" className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans">
+                                <option value="">Choose an item...</option>
+                                <option value="WILL-NAKS Branded Classic Tee ($15)">WILL-NAKS Branded Classic Tee ($15)</option>
+                                <option value="WILL-NAKS Premium Heavyweight Hoodie ($35)">WILL-NAKS Premium Heavyweight Hoodie ($35)</option>
+                                <option value="WILL-NAKS Structured Embroidered Cap ($12)">WILL-NAKS Structured Embroidered Cap ($12)</option>
+                                <option value="Harare Handcrafted Canvas Tote ($10)">Harare Handcrafted Canvas Tote ($10)</option>
+                                <option value="Fundraising Supporter bundle ($50)">Fundraising Supporter Bundle (Tee + Hoodie + Cap) ($50)</option>
+                                <option value="Other / Multi-select item in notes">Other / Mentioned in Notes</option>
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Size / Color</label>
+                                <input name="size_variant" type="text" className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. L / Navy" />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Quantity</label>
+                                <input required name="quantity" type="number" min="1" defaultValue="1" className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Phone / WhatsApp Number</label>
+                            <input required name="phone" type="tel" className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="e.g. +263 775 386 704" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Delivery Address or Special Notes (Optional)</label>
+                            <textarea name="notes" className="w-full px-5 py-3.5 bg-white rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold h-28 text-sm font-sans" placeholder="Mention size selections, alternative colors, or delivery instructions in Harare or elsewhere..."></textarea>
+                          </div>
+
+                          <button 
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-5 bg-navy text-white rounded-2xl font-bold hover:shadow-xl hover:bg-navy/95 transition-all text-base flex items-center justify-center disabled:opacity-50"
+                          >
+                            {loading ? 'Sending Inquiry...' : 'Submit Order Inquiry'}
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </motion.div>
             ) : (

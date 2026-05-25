@@ -71,7 +71,7 @@ export default function About() {
               className="lg:col-span-5 relative"
             >
               <img 
-                src="/src/assets/images/african_children_classroom_1779718922527.png" 
+                src="/assets/african_children_classroom_1779718922527.png" 
                 alt="Children in classroom"
                 className="rounded-3xl shadow-xl border border-gold/15 w-full object-cover aspect-4/3"
                 referrerPolicy="no-referrer"
