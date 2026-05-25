@@ -18,11 +18,13 @@ export default function Support() {
   });
 
   useEffect(() => {
-    if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship'].includes(tabParam) && tabParam !== activeTab) {
+    if (tabParam && ['donate', 'partner', 'volunteer', 'scholarship'].includes(tabParam)) {
       setActiveTab(tabParam as SupportType);
-      setSubmitted(false);
+    } else if (!tabParam) {
+      setActiveTab('donate');
     }
-  }, [tabParam, activeTab]);
+    setSubmitted(false);
+  }, [tabParam]);
 
   const handleTabChange = (tabId: SupportType) => {
     setActiveTab(tabId);
@@ -101,16 +103,20 @@ export default function Support() {
         const age = parseInt(data.age as string, 10) || null;
         const dependants_count = parseInt(data.dependants_count as string, 10) || null;
 
+        // Custom composite mapping to capture the missing fields in the standard schema
+        const compositeNationality = `${data.nationality || 'Zimbabwean'} [Address: ${data.home_address || 'N/A'}]`;
+        const compositeSubjectsStrength = `${data.subjects_strength || ''} [PrevResult: ${data.previous_result || 'N/A'}]`;
+
         const { error } = await supabase.from('scholarships').insert([{
           full_name: data.full_name,
           email: data.email,
-          education_level: data.education_level,
-          institution: data.institution,
+          education_level: data.grade_form, // Store Grade/Form under education_level (Standard Schema)
+          institution: data.school_name,   // Store School Name under institution (Standard Schema)
           reason: data.reason,
           date_of_birth: data.date_of_birth || null,
           age: age,
           gender: data.gender || null,
-          nationality: data.nationality || null,
+          nationality: compositeNationality,
           birth_cert_no: data.birth_cert_no || null,
           phone: data.phone || null,
           parent_name: data.parent_name || null,
@@ -120,7 +126,7 @@ export default function Support() {
           dependants_count: dependants_count,
           is_orphan: is_orphan,
           carer_details: data.carer_details || null,
-          subjects_strength: data.subjects_strength || null,
+          subjects_strength: compositeSubjectsStrength,
           career_aspirations: data.career_aspirations || null,
           chosen_programs: chosen_programs.length > 0 ? chosen_programs : null
         }]);
@@ -425,7 +431,7 @@ export default function Support() {
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Home Address</label>
-                          <input required name="institution" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Residential Town & Street" />
+                          <input required name="home_address" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Residential Town & Street" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Primary Phone / WhatsApp</label>
@@ -444,7 +450,7 @@ export default function Support() {
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Current School / Institution</label>
-                          <input required name="education_level" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="School Name" />
+                          <input required name="school_name" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="School Name" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Grade / Form / Academic Year</label>

@@ -28,6 +28,19 @@ import FinancialReportsView from './FinancialReportsView';
 
 type View = 'overview' | 'donations' | 'deductions' | 'financial-reports' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages';
 
+const extractDetail = (str: string | null, key: string, fallback = 'N/A') => {
+  if (!str) return fallback;
+  const regex = new RegExp(`\\[${key}:\\s*(.*?)\\]`);
+  const match = str.match(regex);
+  if (match) return match[1];
+  return fallback;
+};
+
+const cleanString = (str: string | null) => {
+  if (!str) return '';
+  return str.replace(/\[.*?:.*?\]/g, '').trim();
+};
+
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<View>('overview');
   const [data, setData] = useState<any>({
@@ -676,53 +689,64 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
 
         {activeView === 'scholarships' && (
           <div className="space-y-4">
-            {data.scholarships.map((s: any) => (
-              <div key={s.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
-                <div className="flex justify-between mb-4">
-                  <div>
-                    <h3 className="font-bold text-navy text-lg">{s.full_name}</h3>
-                    {s.phone && <p className="text-xs text-gold font-mono">{s.phone}</p>}
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(s.created_at).toLocaleDateString()}</span>
-                    <button onClick={() => deleteItem('scholarships', s.id)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+            {data.scholarships.map((s: any) => {
+              const isNewForm = s.nationality && s.nationality.includes('[Address:');
+              const nationalityVal = isNewForm ? cleanString(s.nationality) : (s.nationality || 'Zimbabwean');
+              const homeAddressVal = isNewForm ? extractDetail(s.nationality, 'Address') : (s.institution || 'N/A');
+              const schoolVal = isNewForm ? (s.institution || 'N/A') : (s.education_level || 'N/A');
+              const gradeFormVal = isNewForm ? (s.education_level || 'N/A') : 'N/A';
+              const subjectsVal = isNewForm ? cleanString(s.subjects_strength) : (s.subjects_strength || 'N/A');
+              const prevResultVal = isNewForm ? extractDetail(s.subjects_strength, 'PrevResult') : 'N/A';
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4 text-xs font-sans text-navy bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">A: Personal Details</p>
-                    <div><span className="text-gray-400 font-medium">DOB:</span> {s.date_of_birth || 'N/A'} (Age {s.age || 'N/A'})</div>
-                    <div><span className="text-gray-400 font-medium">Gender:</span> {s.gender || 'N/A'}</div>
-                    <div><span className="text-gray-400 font-medium">Nationality:</span> {s.nationality || 'N/A'}</div>
-                    <div><span className="text-gray-400 font-medium">ID / Birth Cert:</span> {s.birth_cert_no || 'N/A'}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">B: Academic & Aspiration</p>
-                    <div><span className="text-gray-400 font-medium">School:</span> {s.education_level || 'N/A'}</div>
-                    <div><span className="text-gray-400 font-medium">Grade/Form:</span> {s.institution || 'N/A'}</div>
-                    <div><span className="text-gray-450 font-bold text-gold">Subjects of Strength:</span> {s.subjects_strength || 'N/A'}</div>
-                    <div><span className="text-gray-455 font-bold text-gold">Aspirations:</span> {s.career_aspirations || 'N/A'}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">C: Family & Finance</p>
-                    <div><span className="text-gray-400 font-medium">Guardian:</span> {s.parent_name || 'N/A'} ({s.parent_relationship || 'N/A'})</div>
-                    <div><span className="text-gray-400 font-medium">Occupation:</span> {s.parent_occupation || 'N/A'}</div>
-                    <div><span className="text-gray-400 font-medium">Monthly Income:</span> {s.monthly_income || 'N/A'}</div>
-                    <div><span className="text-gray-400 font-medium">Dependants:</span> {s.dependants_count ?? 'N/A'}</div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400 font-medium">Orphan:</span>{' '}
-                      <span className={`font-bold uppercase text-[9px] px-1.5 py-0.5 rounded ${s.is_orphan ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {s.is_orphan ? 'Yes' : 'No'}
-                      </span>
+              return (
+                <div key={s.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
+                  <div className="flex justify-between mb-4">
+                    <div>
+                      <h3 className="font-bold text-navy text-lg">{s.full_name}</h3>
+                      {s.phone && <p className="text-xs text-gold font-mono">{s.phone}</p>}
                     </div>
-                    {s.carer_details && <div><span className="text-gray-400 font-medium">Care/Hardship:</span> {s.carer_details}</div>}
+                    <div className="flex items-center space-x-3">
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(s.created_at).toLocaleDateString()}</span>
+                      <button onClick={() => deleteItem('scholarships', s.id)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4 text-xs font-sans text-navy bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">A: Personal Details</p>
+                      <div><span className="text-gray-400 font-medium">DOB:</span> {s.date_of_birth || 'N/A'} (Age {s.age || 'N/A'})</div>
+                      <div><span className="text-gray-400 font-medium">Gender:</span> {s.gender || 'N/A'}</div>
+                      <div><span className="text-gray-400 font-medium">Nationality:</span> {nationalityVal}</div>
+                      <div><span className="text-gray-400 font-semibold text-gold">Home Address:</span> {homeAddressVal}</div>
+                      <div><span className="text-gray-400 font-medium">ID / Birth Cert:</span> {s.birth_cert_no || 'N/A'}</div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">B: Academic & Aspiration</p>
+                      <div><span className="text-gray-400 font-medium">School / Inst:</span> {schoolVal}</div>
+                      <div><span className="text-gray-400 font-medium">Grade / Form:</span> {gradeFormVal}</div>
+                      <div><span className="text-gray-400 font-semibold text-gold font-sans">Previous Result:</span> {prevResultVal}</div>
+                      <div><span className="text-gray-450 font-bold text-navy">Subjects of Strength:</span> {subjectsVal}</div>
+                      <div><span className="text-gray-455 font-bold text-navy">Aspirations:</span> {s.career_aspirations || 'N/A'}</div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">C: Family & Finance</p>
+                      <div><span className="text-gray-400 font-medium">Guardian:</span> {s.parent_name || 'N/A'} ({s.parent_relationship || 'N/A'})</div>
+                      <div><span className="text-gray-400 font-medium">Occupation:</span> {s.parent_occupation || 'N/A'}</div>
+                      <div><span className="text-gray-400 font-medium">Monthly Income:</span> {s.monthly_income || 'N/A'}</div>
+                      <div><span className="text-gray-400 font-medium">Dependants:</span> {s.dependants_count ?? 'N/A'}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-400 font-medium">Orphan:</span>{' '}
+                        <span className={`font-bold uppercase text-[9px] px-1.5 py-0.5 rounded ${s.is_orphan ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {s.is_orphan ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      {s.carer_details && <div><span className="text-gray-400 font-medium">Care/Hardship:</span> {s.carer_details}</div>}
+                    </div>
+                  </div>
 
                 <div className="mb-4 text-xs font-sans">
                   <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] block mb-1">D: Targeted Program Request</span>
@@ -761,7 +785,8 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                   </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
 

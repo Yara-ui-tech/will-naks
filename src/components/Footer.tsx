@@ -119,7 +119,7 @@ export default function Footer() {
             <ul className="space-y-4">
               {quickLinks.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.path} className="text-gray-400 hover:text-gold transition-colors flex items-center group">
+                  <Link to={link.path} onClick={scrollToTop} className="text-gray-400 hover:text-gold transition-colors flex items-center group">
                     <span className="w-1.5 h-1.5 rounded-full bg-gold mr-3 scale-0 group-hover:scale-100 transition-transform"></span>
                     {link.name}
                   </Link>
@@ -137,7 +137,7 @@ export default function Footer() {
             <ul className="space-y-4">
               {supportLinks.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.path} className="text-gray-400 hover:text-gold transition-colors flex items-center group">
+                  <Link to={link.path} onClick={scrollToTop} className="text-gray-400 hover:text-gold transition-colors flex items-center group">
                     <span className="w-1.5 h-1.5 rounded-full bg-gold mr-3 scale-0 group-hover:scale-100 transition-transform"></span>
                     {link.name}
                   </Link>
