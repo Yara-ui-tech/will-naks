@@ -85,7 +85,11 @@ export default function AdminDashboard() {
     description: '',
     variants: 'S, M, L, XL',
     in_stock: true,
-    url: ''
+    url: '',
+    crop_active: false,
+    crop_scale: 220,
+    crop_x: 50,
+    crop_y: 50
   });
   const [uploadingMerchImage, setUploadingMerchImage] = useState(false);
 
@@ -304,7 +308,11 @@ export default function AdminDashboard() {
       description: '',
       variants: 'S, M, L, XL',
       in_stock: true,
-      url: ''
+      url: '',
+      crop_active: false,
+      crop_scale: 220,
+      crop_x: 50,
+      crop_y: 50
     });
     setIsMerchModalOpen(true);
   };
@@ -317,13 +325,18 @@ export default function AdminDashboard() {
       details = { title: product.caption, price: 15, description: '', variants: 'S, M, L, XL', in_stock: true };
     }
     setEditingMerchId(product.id);
+    const hasCrop = !!details.crop;
     setMerchForm({
       title: details.title || product.caption || 'Official Merchandise',
       price: typeof details.price === 'number' ? details.price : parseFloat(details.price) || 15,
       description: details.description || '',
       variants: details.variants || 'S, M, L, XL',
       in_stock: details.in_stock !== false,
-      url: product.url
+      url: product.url,
+      crop_active: hasCrop,
+      crop_scale: details.crop?.scale || 220,
+      crop_x: details.crop?.x !== undefined ? details.crop.x : 50,
+      crop_y: details.crop?.y !== undefined ? details.crop.y : 50
     });
     setIsMerchModalOpen(true);
   };
@@ -358,7 +371,12 @@ export default function AdminDashboard() {
       price: Number(merchForm.price) || 0,
       description: merchForm.description.trim(),
       variants: merchForm.variants.trim(),
-      in_stock: merchForm.in_stock
+      in_stock: merchForm.in_stock,
+      crop: merchForm.crop_active ? {
+        scale: Number(merchForm.crop_scale) || 220,
+        x: Number(merchForm.crop_x) !== undefined ? Number(merchForm.crop_x) : 50,
+        y: Number(merchForm.crop_y) !== undefined ? Number(merchForm.crop_y) : 50
+      } : null
     });
 
     try {
@@ -481,6 +499,81 @@ export default function AdminDashboard() {
         console.error("Failed to fetch welfare_beneficiaries:", e);
       }
 
+      let galleryList = gallery.data || [];
+      const merchandiseItems = galleryList.filter((item: any) => item.category === 'Merchandise');
+      if (merchandiseItems.length === 0) {
+        try {
+          const defaultItems = [
+            {
+              url: '/assets/products.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Branded Classic Tee',
+                price: 15,
+                description: 'Elegant navy soft tee with metallic gold foundation crest.',
+                variants: 'S, M, L, XL, XXL',
+                in_stock: true,
+                crop: { scale: 220, x: 10, y: 10 }
+              })
+            },
+            {
+              url: '/assets/products.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Premium Heavyweight Hoodie',
+                price: 35,
+                description: 'Premium fleece core hoodie with adjustable custom gold tipped toggle.',
+                variants: 'S, M, L, XL',
+                in_stock: true,
+                crop: { scale: 220, x: 90, y: 10 }
+              })
+            },
+            {
+              url: '/assets/products.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Structured Embroidered Cap',
+                price: 12,
+                description: 'Solid curved brim snapback with stitched metallic crest.',
+                variants: 'Adjustable Snapback',
+                in_stock: true,
+                crop: { scale: 220, x: 10, y: 90 }
+              })
+            },
+            {
+              url: '/assets/products.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'Harare Handcrafted Canvas Tote',
+                price: 10,
+                description: 'Heavy duty premium woven cotton tote handpainted by young local artisans in Sunningdale, Harare.',
+                variants: 'One Size',
+                in_stock: true,
+                crop: { scale: 220, x: 90, y: 90 }
+              })
+            },
+            {
+              url: '/assets/products.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'Fundraising Supporter Bundle',
+                price: 50,
+                description: 'Our full commemorative kit representing elite-level support (Classic Tee + Premium Hoodie + Embroidered Cap).',
+                variants: 'Custom sizes selection',
+                in_stock: true,
+                crop: { scale: 120, x: 50, y: 50 }
+              })
+            }
+          ];
+          const { data: seeded } = await supabase.from('gallery').insert(defaultItems).select();
+          if (seeded && seeded.length > 0) {
+            galleryList = [...galleryList, ...seeded];
+          }
+        } catch (e) {
+          console.error("Failed to seed default merchandise items in Admin Dashboard:", e);
+        }
+      }
+
       setData({
         donations: donations.data || [],
         deductions: deductions.data || [],
@@ -488,7 +581,7 @@ export default function AdminDashboard() {
         partners: partners.data || [],
         volunteers: volunteers.data || [],
         news: news.data || [],
-        gallery: gallery.data || [],
+        gallery: galleryList,
         testimonials: testimonials.data || [],
         profiles: profiles.data || [],
         team: teamList,
@@ -1924,11 +2017,24 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                 const price = typeof details.price === 'number' ? details.price : parseFloat(details.price) || 15;
                 const variants = details.variants || 'S, M, L, XL';
                 const in_stock = details.in_stock !== false;
+                const crop = details.crop || null;
 
                 return (
                   <div key={img.id} className="bg-white rounded-3xl overflow-hidden border border-navy/5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between">
                     <div className="relative aspect-square overflow-hidden bg-cream/10">
-                      <img src={img.url} alt={title} className="w-full h-full object-cover" />
+                      {crop ? (
+                        <div 
+                          className="w-full h-full"
+                          style={{
+                            backgroundImage: `url(${img.url})`,
+                            backgroundSize: `${crop.scale}%`,
+                            backgroundPosition: `${crop.x}% ${crop.y}%`,
+                            backgroundRepeat: 'no-repeat'
+                          }}
+                        />
+                      ) : (
+                        <img src={img.url} alt={title} className="w-full h-full object-cover" />
+                      )}
                       <div className="absolute top-3 right-3 flex gap-2">
                         <button 
                           onClick={() => openEditMerchProduct(img)}
@@ -2087,6 +2193,99 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                 )}
                 {uploadingMerchImage && (
                   <div className="text-[10px] text-gold font-bold uppercase animate-pulse">Uploading product image to Supabase Bucket...</div>
+                )}
+              </div>
+
+              {/* Image Cropping Segment */}
+              <div className="bg-gray-50 border border-gray-150 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-navy uppercase tracking-wider">Independent Image Crop</span>
+                    <span className="text-[10px] text-gray-500 font-sans">Focus or isolate a single item from a composite catalog image.</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer"
+                      checked={merchForm.crop_active}
+                      onChange={(e) => setMerchForm(prev => ({ ...prev, crop_active: e.target.checked }))}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
+                  </label>
+                </div>
+
+                {merchForm.crop_active && merchForm.url && (
+                  <div className="space-y-4 pt-2 border-t border-gray-200/50">
+                    {/* Live Crop Preview */}
+                    <div className="flex items-center justify-center">
+                      <div className="relative w-32 h-32 rounded-2xl overflow-hidden border border-gold/20 bg-cream/5 shadow-inner">
+                        <div 
+                          className="w-full h-full"
+                          style={{
+                            backgroundImage: `url(${merchForm.url})`,
+                            backgroundSize: `${merchForm.crop_scale}%`,
+                            backgroundPosition: `${merchForm.crop_x}% ${merchForm.crop_y}%`,
+                            backgroundRepeat: 'no-repeat'
+                          }}
+                        />
+                        <div className="absolute inset-0 border border-gold pointer-events-none rounded-2xl opacity-40"></div>
+                        <span className="absolute bottom-1 right-2 bg-black/55 text-white font-mono text-[8px] px-1 rounded">Live Preview</span>
+                      </div>
+                    </div>
+
+                    {/* Sliders */}
+                    <div className="space-y-2">
+                      <div>
+                        <div className="flex justify-between text-[11px] font-bold text-gray-500 font-mono">
+                          <span>Zoom / Scale:</span>
+                          <span className="text-gold">{merchForm.crop_scale}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="100" 
+                          max="500" 
+                          step="5"
+                          value={merchForm.crop_scale}
+                          onChange={(e) => setMerchForm(prev => ({ ...prev, crop_scale: parseInt(e.target.value) || 220 }))}
+                          className="w-full accent-gold cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="flex justify-between text-[11px] font-bold text-gray-500 font-mono">
+                            <span>Align X:</span>
+                            <span className="text-navy">{merchForm.crop_x}%</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            step="1"
+                            value={merchForm.crop_x}
+                            onChange={(e) => setMerchForm(prev => ({ ...prev, crop_x: parseInt(e.target.value) || 50 }))}
+                            className="w-full accent-navy cursor-pointer"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-[11px] font-bold text-gray-500 font-mono">
+                            <span>Align Y:</span>
+                            <span className="text-navy">{merchForm.crop_y}%</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            step="1"
+                            value={merchForm.crop_y}
+                            onChange={(e) => setMerchForm(prev => ({ ...prev, crop_y: parseInt(e.target.value) || 50 }))}
+                            className="w-full accent-navy cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 

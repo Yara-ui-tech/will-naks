@@ -38,7 +38,7 @@ export default function DonationNotification() {
           </div>
           <div className="flex-1">
             <p className="text-navy font-bold text-sm">New Support!</p>
-            <p className="text-gray-600 text-xs">Someone just donated <span className="text-gold font-bold">${notification.amount}</span></p>
+            <p className="text-gray-600 text-xs">Someone just donated <span className="text-gold font-bold">{notification.amount > 100 ? '$100+' : `$${notification.amount}`}</span></p>
           </div>
           <button 
             onClick={() => setNotification(null)}

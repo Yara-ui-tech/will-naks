@@ -38,7 +38,8 @@ export default function Support() {
           price: 15,
           description: 'Elegant navy soft tee with metallic gold foundation crest.',
           variants: 'S, M, L, XL, XXL',
-          in_stock: true
+          in_stock: true,
+          crop: { scale: 220, x: 10, y: 10 }
         },
         {
           id: 'def-2',
@@ -47,7 +48,8 @@ export default function Support() {
           price: 35,
           description: 'Premium fleece core hoodie with adjustable custom gold tipped toggle.',
           variants: 'S, M, L, XL',
-          in_stock: true
+          in_stock: true,
+          crop: { scale: 220, x: 90, y: 10 }
         },
         {
           id: 'def-3',
@@ -56,7 +58,8 @@ export default function Support() {
           price: 12,
           description: 'Solid curved brim snapback with stitched metallic crest.',
           variants: 'Adjustable Snapback',
-          in_stock: true
+          in_stock: true,
+          crop: { scale: 220, x: 10, y: 90 }
         },
         {
           id: 'def-4',
@@ -65,7 +68,8 @@ export default function Support() {
           price: 10,
           description: 'Heavy duty premium woven cotton tote handpainted by young local artisans in Sunningdale, Harare.',
           variants: 'One Size',
-          in_stock: true
+          in_stock: true,
+          crop: { scale: 220, x: 90, y: 90 }
         },
         {
           id: 'def-5',
@@ -74,7 +78,8 @@ export default function Support() {
           price: 50,
           description: 'Our full commemorative kit representing elite-level support (Classic Tee + Premium Hoodie + Embroidered Cap).',
           variants: 'Custom sizes selection',
-          in_stock: true
+          in_stock: true,
+          crop: { scale: 120, x: 50, y: 50 }
         }
       ];
 
@@ -89,7 +94,8 @@ export default function Support() {
               price: typeof details.price === 'number' ? details.price : parseFloat(details.price) || 15,
               description: details.description || '',
               variants: details.variants || 'S, M, L, XL',
-              in_stock: details.in_stock !== false
+              in_stock: details.in_stock !== false,
+              crop: details.crop || null
             };
           } catch {
             return {
@@ -99,12 +105,70 @@ export default function Support() {
               price: 15,
               description: 'Official WILL-NAKS Fundraiser Merch',
               variants: 'One Size',
-              in_stock: true
+              in_stock: true,
+              crop: null
             };
           }
         });
         setProducts(parsed);
       } else {
+        // Automatically seed default products into Supabase so that they are visible in the Admin Panel
+        try {
+          const itemsToSeed = defaultProducts.map((p) => ({
+            url: p.url,
+            category: 'Merchandise',
+            caption: JSON.stringify({
+              title: p.title,
+              price: p.price,
+              description: p.description,
+              variants: p.variants,
+              in_stock: p.in_stock,
+              crop: p.crop
+            })
+          }));
+
+          const { error: seedError } = await supabase.from('gallery').insert(itemsToSeed);
+          if (!seedError) {
+            const { data: refreshedData } = await supabase
+              .from('gallery')
+              .select('*')
+              .eq('category', 'Merchandise');
+            
+            if (refreshedData && refreshedData.length > 0) {
+              const parsed = refreshedData.map((item: any) => {
+                try {
+                  const details = JSON.parse(item.caption || '{}');
+                  return {
+                    id: item.id,
+                    url: item.url,
+                    title: details.title || 'Official Merchandise',
+                    price: typeof details.price === 'number' ? details.price : parseFloat(details.price) || 15,
+                    description: details.description || '',
+                    variants: details.variants || 'S, M, L, XL',
+                    in_stock: details.in_stock !== false,
+                    crop: details.crop || null
+                  };
+                } catch {
+                  return {
+                    id: item.id,
+                    url: item.url,
+                    title: item.caption || 'Special Merch Item',
+                    price: 15,
+                    description: 'Official WILL-NAKS Fundraiser Merch',
+                    variants: 'One Size',
+                    in_stock: true,
+                    crop: null
+                  };
+                }
+              });
+              setProducts(parsed);
+              return;
+            }
+          }
+        } catch (seedErr) {
+          console.error('Failed to automatically seed default products:', seedErr);
+        }
+
         setProducts(defaultProducts);
       }
     } catch (err) {
@@ -1296,15 +1360,27 @@ export default function Support() {
                           {products.map((p) => (
                             <div key={p.id} className="group bg-white rounded-3xl overflow-hidden border border-navy/5 shadow-md flex flex-col justify-between hover:shadow-xl transition-all duration-300">
                               <div className="relative aspect-square overflow-hidden bg-cream/10">
-                                <img
-                                  src={p.url}
-                                  alt={p.title}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                  referrerPolicy="no-referrer"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800';
-                                  }}
-                                />
+                                {p.crop ? (
+                                  <div 
+                                    className="w-full h-full group-hover:scale-105 transition-transform duration-500"
+                                    style={{
+                                      backgroundImage: `url(${p.url})`,
+                                      backgroundSize: `${p.crop.scale}%`,
+                                      backgroundPosition: `${p.crop.x}% ${p.crop.y}%`,
+                                      backgroundRepeat: 'no-repeat'
+                                    }}
+                                  />
+                                ) : (
+                                  <img
+                                    src={p.url}
+                                    alt={p.title}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    referrerPolicy="no-referrer"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800';
+                                    }}
+                                  />
+                                )}
                                 <div className="absolute top-3 right-3 bg-gold/90 backdrop-blur-sm text-navy text-xs font-black py-1 px-3.5 rounded-full shadow">
                                   ${p.price}
                                 </div>

@@ -67,22 +67,26 @@ export default function DynamicStats() {
   return (
     <div className="space-y-12">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-        {stats.map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
-            className="bg-white p-8 rounded-3xl border border-gold/10 shadow-lg text-center group hover:border-gold/30 transition-all duration-300"
-          >
-            <div className="relative inline-block">
-              <span className="text-3xl md:text-5xl font-serif font-bold text-navy group-hover:text-gold transition-colors duration-300 italic">
-                {stat.prefix}{stat.value.toLocaleString()}{stat.suffix}
-              </span>
-            </div>
-            <p className="text-gray-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-4 font-sans line-clamp-1">{stat.label}</p>
-          </motion.div>
-        ))}
+        {stats.map((stat, index) => {
+          const isTotalSupport = stat.label === 'Total Support Received';
+          const shouldMask = isTotalSupport && stat.value > 100;
+          return (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              className="bg-white p-8 rounded-3xl border border-gold/10 shadow-lg text-center group hover:border-gold/30 transition-all duration-300"
+            >
+              <div className="relative inline-block">
+                <span className="text-3xl md:text-5xl font-serif font-bold text-navy group-hover:text-gold transition-colors duration-300 italic">
+                  {shouldMask ? '$100+' : `${stat.prefix || ''}${stat.value.toLocaleString()}${stat.suffix || ''}`}
+                </span>
+              </div>
+              <p className="text-gray-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-4 font-sans line-clamp-1">{stat.label}</p>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Financial Transparency & Disbursement Disclosures Section */}
@@ -118,7 +122,9 @@ export default function DynamicStats() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-5 rounded-2xl border border-navy/5 text-center">
                   <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Total Support Received</span>
-                  <span className="text-2xl font-bold text-green-600">${transparency.donated.toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-green-600">
+                    {transparency.donated > 100 ? '$100+' : `$${transparency.donated.toLocaleString()}`}
+                  </span>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-navy/5 text-center">
                   <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Total Amount Invested/Deducted</span>
@@ -126,7 +132,9 @@ export default function DynamicStats() {
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-gold/20 text-center ring-1 ring-gold/10">
                   <span className="text-[10px] text-gold font-bold uppercase tracking-wider block mb-1">Net Remaining Balance</span>
-                  <span className="text-2xl font-bold text-navy">${remainingFunds.toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-navy">
+                    {transparency.donated > 100 ? '$100+' : `$${remainingFunds.toLocaleString()}`}
+                  </span>
                 </div>
               </div>
 
