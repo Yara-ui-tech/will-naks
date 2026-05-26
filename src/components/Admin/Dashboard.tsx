@@ -24,11 +24,14 @@ import {
   DollarSign,
   BarChart3,
   ShoppingBag,
-  Edit
+  Edit,
+  FileText,
+  Printer,
+  ClipboardList
 } from 'lucide-react';
 import FinancialReportsView from './FinancialReportsView';
 
-type View = 'overview' | 'donations' | 'deductions' | 'financial-reports' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages' | 'merchandise';
+type View = 'overview' | 'donations' | 'deductions' | 'financial-reports' | 'scholarships' | 'partners' | 'volunteers' | 'news' | 'gallery' | 'testimonials' | 'admins' | 'team' | 'events' | 'impact' | 'social' | 'members' | 'messages' | 'merchandise' | 'welfare';
 
 const extractDetail = (str: string | null, key: string, fallback = 'N/A') => {
   if (!str) return fallback;
@@ -60,7 +63,8 @@ export default function AdminDashboard() {
     impact: [],
     social: [],
     members: [],
-    messages: []
+    messages: [],
+    welfare: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -80,6 +84,72 @@ export default function AdminDashboard() {
     url: ''
   });
   const [uploadingMerchImage, setUploadingMerchImage] = useState(false);
+
+  // Donation Receipts States
+  const [selectedDonationForReceipt, setSelectedDonationForReceipt] = useState<any>(null);
+  const [isRecordDonationOpen, setIsRecordDonationOpen] = useState(false);
+  const [newDonationForm, setNewDonationForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    donation_type: 'Cash' as 'Cash' | 'Goods' | 'In-Kind' | 'Online',
+    amount_usd: '50',
+    amount_zwl: '',
+    goods_description: '',
+    estimated_value: '',
+    purpose: 'Disadvantaged Orphans Scholarship Fund',
+    received_by: 'Yvonne Kodzaimambo (Administrative & Logistics Officer)'
+  });
+
+  // Welfare Beneficiary Intake States
+  const [selectedWelfareForForm, setSelectedWelfareForForm] = useState<any>(null);
+  const [isRecordWelfareOpen, setIsRecordWelfareOpen] = useState(false);
+  const [editingWelfareId, setEditingWelfareId] = useState<string | null>(null);
+
+  const initialWelfareForm = {
+    reference_number: '',
+    date_of_intake: new Date().toISOString().split('T')[0],
+    recorded_by: 'Yvonne Kodzaimambo (Administrative & Logistics Officer)',
+    category: 'Orphaned Child',
+    category_other: '',
+    full_name: '',
+    date_of_birth: '',
+    age: '',
+    gender: 'Male',
+    national_id: '',
+    physical_address: '',
+    area_suburb: '',
+    phone: '',
+    living_situation: 'With family',
+    carer_name: '',
+    carer_relationship: '',
+    household_size: '1',
+    monthly_income_usd: '0',
+    monthly_income_zwl: '0',
+    income_source: '',
+    circumstance_context: '',
+    support_requested: [] as string[],
+    support_requested_other: '',
+    verifier_name: 'Yvonne Kodzaimambo',
+    verifier_role: 'Administrative & Logistics Officer',
+    verifier_org: 'WILL-NAKS FOUNDATION',
+    verifier_phone: '+263772836263',
+    verifier_signature: 'Confirmed digitally',
+    verification_date: new Date().toISOString().split('T')[0],
+    approved_by: 'Simbarashe O Manongwa (CEO)',
+    approval_date: new Date().toISOString().split('T')[0],
+    allocated_package: '',
+    distribution_date: '',
+    follow_up_date: '',
+    notes: ''
+  };
+
+  const [welfareForm, setWelfareForm] = useState(initialWelfareForm);
+
+  const generateWelfareRef = () => {
+    return `WNF-WEL-${Math.floor(1000 + Math.random() * 9000)}`;
+  };
 
   const openAddMerchProduct = () => {
     setEditingMerchId(null);
@@ -251,6 +321,21 @@ export default function AdminDashboard() {
         console.warn('Deductions table fetch error (expected if table not created yet):', deductions.error.message);
       }
 
+      let welfareList: any[] = [];
+      try {
+        const { data: welfareData, error: welfareErr } = await supabase
+          .from('welfare_beneficiaries')
+          .select('*')
+          .order('date_of_intake', { ascending: false });
+        if (welfareErr) {
+          console.warn("Welfare table fetch error (expected if table not created yet):", welfareErr.message);
+        } else {
+          welfareList = welfareData || [];
+        }
+      } catch (e: any) {
+        console.error("Failed to fetch welfare_beneficiaries:", e);
+      }
+
       setData({
         donations: donations.data || [],
         deductions: deductions.data || [],
@@ -266,7 +351,8 @@ export default function AdminDashboard() {
         impact: impact.data || [],
         social: social.data || [],
         members: members.data || [],
-        messages: messages.data || []
+        messages: messages.data || [],
+        welfare: welfareList
       });
     } catch (err: any) {
       console.error('Error fetching data:', err);
@@ -457,6 +543,130 @@ export default function AdminDashboard() {
     fetchData(true);
   };
 
+  const saveManualDonation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        email: newDonationForm.email || `${newDonationForm.full_name?.toLowerCase().replace(/\s+/g, "")}@wnf-donor.org`,
+        phone: newDonationForm.phone || 'N/A',
+        address: newDonationForm.address || 'N/A',
+        donation_type: newDonationForm.donation_type,
+        amount_usd: newDonationForm.amount_usd || '0',
+        amount_zwl: newDonationForm.amount_zwl || 'N/A',
+        goods_description: newDonationForm.goods_description || 'N/A',
+        estimated_value: newDonationForm.estimated_value || 'N/A',
+        purpose: newDonationForm.purpose,
+        received_by: newDonationForm.received_by
+      };
+
+      const jsonEmail = JSON.stringify(payload);
+      const donationAmount = parseFloat(payload.amount_usd) || 0;
+
+      const { error } = await supabase.from('donations').insert([{
+        amount: donationAmount,
+        donor_name: newDonationForm.full_name,
+        email: jsonEmail,
+        payment_status: 'approved'
+      }]);
+
+      if (error) throw error;
+      alert('Official donation recorded and receipt generated successfully!');
+      setIsRecordDonationOpen(false);
+      
+      // Reset form
+      setNewDonationForm({
+        full_name: '',
+        email: '',
+        phone: '',
+        address: '',
+        donation_type: 'Cash',
+        amount_usd: '50',
+        amount_zwl: '',
+        goods_description: '',
+        estimated_value: '',
+        purpose: 'Disadvantaged Orphans Scholarship Fund',
+        received_by: 'Yvonne Kodzaimambo (Administrative & Logistics Officer)'
+      });
+
+      fetchData(true);
+    } catch (err: any) {
+      alert('Error recording donation: ' + err.message);
+    }
+  };
+
+  const saveWelfareBeneficiary = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        reference_number: welfareForm.reference_number || generateWelfareRef(),
+        date_of_intake: welfareForm.date_of_intake,
+        recorded_by: welfareForm.recorded_by,
+        category: welfareForm.category,
+        category_other: welfareForm.category_other,
+        full_name: welfareForm.full_name,
+        date_of_birth: welfareForm.date_of_birth,
+        age: parseInt(welfareForm.age as string) || null,
+        gender: welfareForm.gender,
+        national_id: welfareForm.national_id,
+        physical_address: welfareForm.physical_address,
+        area_suburb: welfareForm.area_suburb,
+        phone: welfareForm.phone,
+        living_situation: welfareForm.living_situation,
+        carer_name: welfareForm.carer_name,
+        carer_relationship: welfareForm.carer_relationship,
+        household_size: parseInt(welfareForm.household_size as string) || 1,
+        monthly_income_usd: parseFloat(welfareForm.monthly_income_usd as string) || 0,
+        monthly_income_zwl: parseFloat(welfareForm.monthly_income_zwl as string) || 0,
+        income_source: welfareForm.income_source,
+        circumstance_context: welfareForm.circumstance_context,
+        support_requested: welfareForm.support_requested,
+        support_requested_other: welfareForm.support_requested_other,
+        verifier_name: welfareForm.verifier_name,
+        verifier_role: welfareForm.verifier_role,
+        verifier_org: welfareForm.verifier_org,
+        verifier_phone: welfareForm.verifier_phone,
+        verifier_signature: welfareForm.verifier_signature,
+        verification_date: welfareForm.verification_date,
+        approved_by: welfareForm.approved_by,
+        approval_date: welfareForm.approval_date,
+        allocated_package: welfareForm.allocated_package,
+        distribution_date: welfareForm.distribution_date || null,
+        follow_up_date: welfareForm.follow_up_date || null,
+        notes: welfareForm.notes
+      };
+
+      if (editingWelfareId) {
+        const { error } = await supabase
+          .from('welfare_beneficiaries')
+          .update(payload)
+          .eq('id', editingWelfareId);
+        if (error) throw error;
+        alert('Beneficiary intake record updated successfully!');
+      } else {
+        const { error } = await supabase
+          .from('welfare_beneficiaries')
+          .insert([payload]);
+        if (error) {
+          if (error.code === '23505') {
+            payload.reference_number = `WNF-WEL-${Math.floor(1000 + Math.random() * 9000)}`;
+            const { error: retryError } = await supabase
+              .from('welfare_beneficiaries')
+              .insert([payload]);
+            if (retryError) throw retryError;
+          } else {
+            throw error;
+          }
+        }
+        alert('New beneficiary intake record registered successfully!');
+      }
+
+      setIsRecordWelfareOpen(false);
+      fetchData(true);
+    } catch (err: any) {
+      alert('Error saving record: ' + err.message + '\n\nMake sure to run the Welfare table SQL script in your database.');
+    }
+  };
+
   const toggleSocialActive = async (id: string, current: boolean) => {
     const { error } = await supabase.from('social_links').update({ is_active: !current }).eq('id', id);
     if (error) alert(`Error updating link: ${error.message}`);
@@ -541,6 +751,7 @@ export default function AdminDashboard() {
           <NavItem active={activeView === 'deductions'} onClick={() => { setActiveView('deductions'); setIsSidebarOpen(false); }} icon={DollarSign} label="Fund Deductions" />
           <NavItem active={activeView === 'financial-reports'} onClick={() => { setActiveView('financial-reports'); setIsSidebarOpen(false); }} icon={BarChart3} label="Financial Reports" />
           <NavItem active={activeView === 'scholarships'} onClick={() => { setActiveView('scholarships'); setIsSidebarOpen(false); }} icon={GraduationCap} label="Scholarships" />
+          <NavItem active={activeView === 'welfare'} onClick={() => { setActiveView('welfare'); setIsSidebarOpen(false); }} icon={ClipboardList} label="Welfare Intakes" />
           <NavItem active={activeView === 'partners'} onClick={() => { setActiveView('partners'); setIsSidebarOpen(false); }} icon={Handshake} label="Partners" />
           <NavItem active={activeView === 'volunteers'} onClick={() => { setActiveView('volunteers'); setIsSidebarOpen(false); }} icon={UserPlus} label="Volunteers" />
           <NavItem active={activeView === 'members'} onClick={() => { setActiveView('members'); setIsSidebarOpen(false); }} icon={Users2} label="Members" />
@@ -710,6 +921,23 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
         
         {activeView === 'donations' && (
           <div className="space-y-6">
+            <div className="bg-emerald-50/50 border border-emerald-200/60 p-6 rounded-[2rem] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="font-bold text-navy text-lg flex items-center gap-2">
+                  <span>💖</span> <span>Donation Ledger & Official Receipts</span>
+                </h3>
+                <p className="text-gray-500 text-xs mt-1 leading-relaxed">
+                  Generate official donation receipts automatically. Record and manage Cash, Goods, In-Kind, or Online contributions while maintaining bulletproof audit trails.
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsRecordDonationOpen(true)}
+                className="px-5 py-2.5 bg-navy hover:bg-navy/90 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center space-x-2"
+              >
+                <span>+ Record Donation / Receipt</span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
               <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-center">
                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Fund Deposited / Received</span>
@@ -725,21 +953,68 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
               </div>
             </div>
 
-            <Table headers={['Date', 'Donor Name', 'Email', 'Amount', 'Status', 'Actions']}>
-              {data.donations.map((d: any) => (
-                <tr key={d.id} className="border-b text-sm">
-                  <td className="p-4">{new Date(d.created_at).toLocaleDateString()}</td>
-                  <td className="p-4 font-bold text-navy">{d.donor_name || 'Anonymous'}</td>
-                  <td className="p-4 text-xs text-gray-500 font-mono">{d.email || 'N/A'}</td>
-                  <td className="p-4 font-bold text-green-600">${d.amount}</td>
-                  <td className="p-4 uppercase text-xs font-bold text-gold">{d.payment_status}</td>
-                  <td className="p-4">
-                    <button onClick={() => deleteItem('donations', d.id)} className="text-red-400 hover:text-red-500 transition-colors">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+            <Table headers={['Receipt No', 'Date', 'Donor Name', 'Type', 'Amount (USD)', 'Programme / Purpose', 'Actions']}>
+              {data.donations.map((d: any) => {
+                const parsed = (() => {
+                  try {
+                    if (d.email && d.email.startsWith('{')) {
+                      return JSON.parse(d.email);
+                    }
+                  } catch (e) {}
+                  return {
+                    email: d.email || 'N/A',
+                    phone: 'N/A',
+                    address: 'N/A',
+                    donation_type: 'Online',
+                    amount_usd: d.amount || '0',
+                    amount_zwl: 'N/A',
+                    goods_description: 'N/A',
+                    estimated_value: 'N/A',
+                    purpose: 'General Scholarship & Humanitarian Support',
+                    received_by: 'Yvonne Kodzaimambo'
+                  };
+                })();
+
+                const receiptNo = `WNF-REC-${(d.id || '').replace(/-/g, '').substring(0, 8).toUpperCase()}`;
+
+                return (
+                  <tr key={d.id} className="border-b text-sm hover:bg-gray-50/50">
+                    <td className="p-4 font-mono font-bold text-navy text-[11px]">{receiptNo}</td>
+                    <td className="p-4 text-xs text-gray-500">{new Date(d.created_at).toLocaleDateString()}</td>
+                    <td className="p-4 font-bold text-navy">{d.donor_name || 'Anonymous'}</td>
+                    <td className="p-4">
+                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 bg-gold/10 text-gold rounded-full">
+                        {parsed.donation_type}
+                      </span>
+                    </td>
+                    <td className="p-4 font-bold text-green-600 font-mono">
+                      {parsed.donation_type === 'Goods' || parsed.donation_type === 'In-Kind' ? (
+                        <span className="text-gray-400 font-normal italic text-xs shadow-inner" title={parsed.goods_description}>
+                          Goods (Valued {parsed.estimated_value})
+                        </span>
+                      ) : (
+                        `$${d.amount}`
+                      )}
+                    </td>
+                    <td className="p-4 text-xs text-gray-600 truncate max-w-[200px]" title={parsed.purpose}>
+                      {parsed.purpose}
+                    </td>
+                    <td className="p-4 flex items-center space-x-3">
+                      <button 
+                        onClick={() => setSelectedDonationForReceipt(d)} 
+                        className="text-navy hover:text-gold transition-colors flex items-center space-x-1"
+                        title="View Official Donation Receipt"
+                      >
+                        <FileText className="h-4 w-4 text-gold" />
+                        <span className="text-[11px] font-bold">Receipt</span>
+                      </button>
+                      <button onClick={() => deleteItem('donations', d.id)} className="text-red-400 hover:text-red-500 transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </Table>
           </div>
         )}
@@ -801,6 +1076,120 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
           <FinancialReportsView data={data} />
         )}
 
+        {activeView === 'welfare' && (
+          <div className="space-y-6 animate-fadeIn text-left">
+            {/* Header banner */}
+            <div className="bg-teal-50/50 border border-teal-200/60 p-6 rounded-[2.5rem] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="font-bold text-navy text-xl flex items-center gap-2">
+                  <ClipboardList className="h-6 w-6 text-teal-600" />
+                  <span>Welfare Beneficiaries Intake Ledger</span>
+                </h3>
+                <p className="text-gray-500 text-xs mt-1 leading-relaxed font-sans">
+                  Humanitarian & Donation Support Programme — WILL-NAKS FOUNDATION. Record, approve, schedule distributions, and generate printable intake forms.
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  setEditingWelfareId(null);
+                  setWelfareForm({
+                    ...initialWelfareForm,
+                    reference_number: generateWelfareRef()
+                  });
+                  setIsRecordWelfareOpen(true);
+                }}
+                className="px-5 py-2.5 bg-navy hover:bg-navy/90 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>+ Record Beneficiary Intake</span>
+              </button>
+            </div>
+
+            {/* List Table */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <Table headers={['Reference No', 'Date of Intake', 'Full Name', 'Category', 'Age/Gender', 'Status', 'Actions']}>
+                {(!data.welfare || data.welfare.length === 0) ? (
+                  <tr>
+                    <td colSpan={7} className="p-12 text-center text-gray-400 font-sans text-xs">
+                      No welfare beneficiary intake records found. Click "+ Record Beneficiary Intake" to insert one.
+                    </td>
+                  </tr>
+                ) : (
+                  data.welfare.map((w: any) => {
+                    const isApproved = w.approved_by && w.approval_date;
+                    return (
+                      <tr key={w.id} className="border-b border-gray-50 hover:bg-gray-50/30 transition-colors">
+                        <td className="p-4 font-mono text-[11px] font-bold text-gray-500">{w.reference_number || 'N/A'}</td>
+                        <td className="p-4 text-xs text-gray-400 font-sans">{w.date_of_intake ? new Date(w.date_of_intake).toLocaleDateString() : 'N/A'}</td>
+                        <td className="p-4">
+                          <span className="font-bold text-navy text-sm block">{w.full_name}</span>
+                          <span className="text-[10px] text-gray-400 font-mono block">{w.national_id || 'No National ID/Birth Cert'}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-[10px] font-bold px-2.5 py-1 bg-navy/5 text-navy rounded-full uppercase tracking-wide">
+                            {w.category === 'Other' ? (w.category_other || 'Other') : w.category}
+                          </span>
+                        </td>
+                        <td className="p-4 text-xs text-gray-500">
+                          {w.age ? `${w.age} yrs` : 'N/A'} ({w.gender || 'N/A'})
+                        </td>
+                        <td className="p-4">
+                          {isApproved ? (
+                            <span className="text-[9px] font-black tracking-widest uppercase bg-green-50 text-green-600 px-2.5 py-1 rounded-full border border-green-200">
+                              Approved
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-black tracking-widest uppercase bg-amber-50 text-amber-600 px-2.5 py-1 rounded-full border border-amber-200">
+                              Pending Review
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 flex items-center space-x-3">
+                          <button 
+                            onClick={() => setSelectedWelfareForForm(w)}
+                            className="text-navy hover:text-gold transition-colors flex items-center space-x-1"
+                            title="Print Welfare Intake Form"
+                          >
+                            <FileText className="h-4 w-4 text-gold" />
+                            <span className="text-[11px] font-bold">Print Form</span>
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setEditingWelfareId(w.id);
+                              setWelfareForm({
+                                ...w,
+                                date_of_intake: w.date_of_intake ? new Date(w.date_of_intake).toISOString().split('T')[0] : '',
+                                verification_date: w.verification_date ? new Date(w.verification_date).toISOString().split('T')[0] : '',
+                                approval_date: w.approval_date ? new Date(w.approval_date).toISOString().split('T')[0] : '',
+                                distribution_date: w.distribution_date ? new Date(w.distribution_date).toISOString().split('T')[0] : '',
+                                follow_up_date: w.follow_up_date ? new Date(w.follow_up_date).toISOString().split('T')[0] : '',
+                                support_requested: Array.isArray(w.support_requested) ? w.support_requested : []
+                              });
+                              setIsRecordWelfareOpen(true);
+                            }}
+                            className="text-navy hover:text-blue-600 transition-colors flex items-center space-x-1"
+                            title="Edit Record"
+                          >
+                            <Edit className="h-4 w-4 text-blue-500" />
+                            <span className="text-[11px] font-bold font-sans">Edit</span>
+                          </button>
+                          <button 
+                            onClick={() => deleteItem('welfare_beneficiaries', w.id)} 
+                            className="text-red-400 hover:text-red-500 transition-colors p-1"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </Table>
+            </div>
+          </div>
+        )}
+
         {activeView === 'scholarships' && (
           <div className="space-y-4">
             {data.scholarships.map((s: any) => {
@@ -811,6 +1200,12 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
               const gradeFormVal = isNewForm ? (s.education_level || 'N/A') : 'N/A';
               const subjectsVal = isNewForm ? cleanString(s.subjects_strength) : (s.subjects_strength || 'N/A');
               const prevResultVal = isNewForm ? extractDetail(s.subjects_strength, 'PrevResult') : 'N/A';
+
+              const carerTextOnly = cleanString(s.carer_details);
+              const birthCertUrlVal = extractDetail(s.carer_details, 'BirthCert', '');
+              const transcriptUrlVal = extractDetail(s.carer_details, 'Transcript', '');
+              const photoUrlVal = extractDetail(s.carer_details, 'Photo', '');
+              const hardshipLetterUrlVal = extractDetail(s.carer_details, 'HardshipLetter', '');
 
               return (
                 <div key={s.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 group">
@@ -858,7 +1253,7 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                           {s.is_orphan ? 'Yes' : 'No'}
                         </span>
                       </div>
-                      {s.carer_details && <div><span className="text-gray-400 font-medium">Care/Hardship:</span> {s.carer_details}</div>}
+                      {carerTextOnly && <div><span className="text-gray-400 font-medium">Care/Hardship:</span> {carerTextOnly}</div>}
                     </div>
                   </div>
 
@@ -881,6 +1276,54 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                   <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] block mb-1">E: Reason for Hardship / Message</span>
                   <p className="text-gray-700 leading-relaxed italic">"{s.reason}"</p>
                 </div>
+
+                {(birthCertUrlVal || transcriptUrlVal || photoUrlVal || hardshipLetterUrlVal) && (
+                  <div className="mb-4 text-xs font-sans p-3 bg-navy/[0.02] border border-gray-100 rounded-xl">
+                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] block mb-2">F: Supporting Documents Attachments</span>
+                    <div className="flex flex-wrap gap-2">
+                      {birthCertUrlVal && (
+                        <a 
+                          href={birthCertUrlVal} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="bg-navy text-white font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-gold hover:text-navy transition-all"
+                        >
+                          <span>📄</span> Birth Cert / ID
+                        </a>
+                      )}
+                      {transcriptUrlVal && (
+                        <a 
+                          href={transcriptUrlVal} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="bg-navy text-white font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-gold hover:text-navy transition-all"
+                        >
+                          <span>🎓</span> Academic Report
+                        </a>
+                      )}
+                      {photoUrlVal && (
+                        <a 
+                          href={photoUrlVal} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="bg-navy text-white font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-gold hover:text-navy transition-all"
+                        >
+                          <span>👤</span> Portrait Photo
+                        </a>
+                      )}
+                      {hardshipLetterUrlVal && (
+                        <a 
+                          href={hardshipLetterUrlVal} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="bg-navy text-white font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-gold hover:text-navy transition-all"
+                        >
+                          <span>✉️</span> Hardship Letter
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-1.5">
@@ -1477,6 +1920,1072 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                 className="w-full py-4 bg-navy text-white rounded-2xl font-bold hover:bg-navy/95 transition-all text-sm mt-4 disabled:opacity-50"
               >
                 {editingMerchId ? 'Save Product Customizations' : 'Create Live Fundraising Product'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Donation Receipt View/Print Modal */}
+      {selectedDonationForReceipt && (() => {
+        const d = selectedDonationForReceipt;
+        const parsed = (() => {
+          try {
+            if (d.email && d.email.startsWith('{')) {
+              return JSON.parse(d.email);
+            }
+          } catch (e) {}
+          return {
+            email: d.email || 'N/A',
+            phone: 'N/A',
+            address: 'N/A',
+            donation_type: 'Online',
+            amount_usd: d.amount || '0',
+            amount_zwl: 'N/A',
+            goods_description: 'N/A',
+            estimated_value: 'N/A',
+            purpose: 'General Scholarship & Humanitarian Support',
+            received_by: 'Yvonne Kodzaimambo'
+          };
+        })();
+
+        const receiptNo = `WNF-REC-${(d.id || '').replace(/-/g, '').substring(0, 8).toUpperCase()}`;
+
+        return (
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4 font-sans">
+            <div className="bg-white rounded-[2.5rem] p-6 md:p-10 w-full max-w-4xl border border-navy/5 shadow-2xl relative text-left my-8">
+              <button 
+                onClick={() => setSelectedDonationForReceipt(null)}
+                className="absolute top-5 right-5 text-gray-400 hover:text-navy hover:scale-105 transition-all text-sm font-bold bg-gray-100 p-2.5 rounded-full cursor-pointer print:hidden"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="border-4 border-dashed border-gray-200 bg-cream/10 p-6 md:p-8 rounded-3xl relative print-area overflow-hidden font-sans">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-center border-b-2 border-navy/10 pb-6 mb-6 gap-4">
+                  <div className="text-center md:text-left">
+                    <h3 className="font-serif font-extrabold text-2xl tracking-tight text-navy uppercase">Official Donation Receipt</h3>
+                    <span className="text-xs font-semibold text-gold tracking-widest uppercase block mt-1 italic">Acknowledgement of Contribution — WILL-NAKS FOUNDATION</span>
+                    <span className="text-[10px] text-gray-400 block mt-0.5">PVO Registration No: 18/2023 | Harare, Zimbabwe</span>
+                  </div>
+                  <div className="text-center md:text-right bg-navy text-white py-2.5 px-4 rounded-xl shadow-md border-b-4 border-gold">
+                    <span className="text-[9px] uppercase tracking-widest block text-gold font-bold">Receipt Number</span>
+                    <span className="font-mono text-xs font-black tracking-wider">{receiptNo}</span>
+                  </div>
+                </div>
+
+                {/* Receipt Fields Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="border-b border-navy/5 pb-2.5">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Date of Donation</span>
+                    <span className="text-navy font-bold">{new Date(d.created_at).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
+                  </div>
+                  <div className="border-b border-navy/5 pb-2.5">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Donation Type</span>
+                    <span className="text-navy font-bold px-2 py-0.5 bg-gold/10 text-gold rounded-full inline-block mt-0.5 uppercase tracking-wide text-[9px]">{parsed.donation_type}</span>
+                  </div>
+                  <div className="border-b border-navy/5 pb-2.5 md:col-span-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Donor Full Name</span>
+                    <span className="text-navy font-bold text-sm">{d.donor_name}</span>
+                  </div>
+                  <div className="border-b border-navy/5 pb-2.5">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Donor Phone / Email</span>
+                    <span className="text-navy font-medium text-xs font-mono">{parsed.phone || 'N/A'} / {parsed.email || 'N/A'}</span>
+                  </div>
+                  <div className="border-b border-navy/5 pb-2.5">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Donor Home Address</span>
+                    <span className="text-navy font-medium text-xs leading-tight block">{parsed.address || 'N/A'}</span>
+                  </div>
+
+                  {(parsed.donation_type === 'Online' || parsed.donation_type === 'Cash') ? (
+                    <>
+                      <div className="border-b border-navy/5 pb-2.5">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Amount (USD)</span>
+                        <span className="text-green-700 font-extrabold text-sm font-mono">${parsed.amount_usd || d.amount} USD</span>
+                      </div>
+                      <div className="border-b border-navy/5 pb-2.5">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Amount (ZWL / Alternative)</span>
+                        <span className="text-navy font-medium font-mono text-xs">{parsed.amount_zwl || 'N/A'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="border-b border-navy/5 pb-2.5 md:col-span-2">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Description of Goods</span>
+                        <span className="text-navy font-medium leading-relaxed block bg-white p-2 border border-navy/5 rounded-lg mt-1 text-[11px]">{parsed.goods_description || 'N/A'}</span>
+                      </div>
+                      <div className="border-b border-navy/5 pb-2.5 md:col-span-2">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Estimated Value</span>
+                        <span className="text-navy font-extrabold font-mono text-xs">{parsed.estimated_value || 'N/A'}</span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="border-b border-navy/5 pb-2.5 md:col-span-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Foundation Programme / Purpose</span>
+                    <span className="text-navy font-medium text-[11px] font-serif italic mt-0.5 block">{parsed.purpose || 'General registered humanitarian and educational programmes'}</span>
+                  </div>
+                  <div className="pb-2.5 md:col-span-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Received By (Staff Representative)</span>
+                    <span className="text-navy font-bold">{parsed.received_by || 'Yvonne Kodzaimambo'}</span>
+                  </div>
+                </div>
+
+                <div className="my-5 p-4 bg-navy/[0.02] border border-navy/5 rounded-2xl text-[10px] text-gray-500 leading-relaxed italic text-justify">
+                  <strong>Acknowledgement Statement:</strong> WILL-NAKS FOUNDATION gratefully acknowledges receipt of the above-described donation from the donor named above. This contribution will be used exclusively for the Foundation's registered humanitarian and educational programmes, including support for orphans, the elderly, widows, and underprivileged students across Zimbabwe. No goods or services were provided in exchange for this donation. All donations are managed transparently and records are maintained for audit processes.
+                </div>
+
+                {/* Sign-Off block */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-navy/10 text-[9px]">
+                  <div className="space-y-1 bg-white p-3 rounded-xl border border-navy/5">
+                    <span className="font-bold text-navy uppercase block mb-1">Receipt Issued By:</span>
+                    <div className="h-6 flex items-end justify-center border-b border-gray-300 border-dashed">
+                      <span className="font-serif italic text-blue-600 font-bold transform -rotate-1">Y. Kodzaimambo</span>
+                    </div>
+                    <span className="text-gray-400 font-sans block text-center">Authorized Signature</span>
+                    <div className="text-gray-600 flex justify-between pt-1">
+                      <span>Position: Administrative Officer</span>
+                      <span>Date: {new Date(d.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 bg-white p-3 rounded-xl border border-navy/5">
+                    <span className="font-bold text-navy uppercase block mb-1">Donor Acknowledgement Confirmation:</span>
+                    <div className="h-6 flex items-end justify-center border-b border-gray-300 border-dashed">
+                      <span className="font-mono text-gray-400 text-[8px]">[Electronically Confirmed]</span>
+                    </div>
+                    <span className="text-gray-400 font-sans block text-center">Donor Signature</span>
+                    <div className="text-gray-600 flex justify-between pt-1">
+                      <span>Name: {d.donor_name}</span>
+                      <span>Date: {new Date(d.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center mt-6 text-[10px] text-navy font-bold tracking-wide uppercase font-serif">
+                  Thank you for your generosity. Together, we are changing lives.
+                </div>
+              </div>
+
+              <div className="mt-6 flex space-x-3 print:hidden justify-end">
+                <button 
+                  onClick={() => setSelectedDonationForReceipt(null)}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                >
+                  Close View
+                </button>
+                <button 
+                  onClick={() => window.print()}
+                  className="px-6 py-2.5 bg-navy hover:bg-navy/95 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow flex items-center space-x-1.5"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print Receipt</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Welfare Intake Record Modal */}
+      {isRecordWelfareOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4 font-sans text-left">
+          <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-4xl border border-navy/5 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setIsRecordWelfareOpen(false)}
+              className="absolute top-5 right-5 text-gray-400 hover:text-navy hover:scale-105 transition-all text-sm font-bold bg-gray-100 p-2 rounded-full cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-2xl font-serif font-bold text-navy mb-1 italic">
+              {editingWelfareId ? 'Edit Welfare Intake Form' : 'Record Welfare Beneficiary Intake'}
+            </h3>
+            <p className="text-xs text-gray-500 mb-6">Humanitarian & Donation Support Programme — WILL-NAKS FOUNDATION. Ensure all beneficiary facts are documented accurately.</p>
+
+            <form onSubmit={saveWelfareBeneficiary} className="space-y-6">
+              {/* Reference and metadata header */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Reference Number</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={welfareForm.reference_number}
+                    onChange={(e) => setWelfareForm(prev => ({ ...prev, reference_number: e.target.value }))}
+                    className="w-full px-4 py-2 bg-white rounded-xl outline-none border focus:border-gold text-xs font-mono font-bold text-navy" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Date of Intake</label>
+                  <input 
+                    required 
+                    type="date" 
+                    value={welfareForm.date_of_intake}
+                    onChange={(e) => setWelfareForm(prev => ({ ...prev, date_of_intake: e.target.value }))}
+                    className="w-full px-4 py-2 bg-white rounded-xl outline-none border focus:border-gold text-xs font-sans text-navy" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Recorded By (Officer)</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={welfareForm.recorded_by}
+                    onChange={(e) => setWelfareForm(prev => ({ ...prev, recorded_by: e.target.value }))}
+                    className="w-full px-4 py-2 bg-white rounded-xl outline-none border focus:border-gold text-xs font-sans text-navy" 
+                  />
+                </div>
+              </div>
+
+              {/* Section A */}
+              <div className="space-y-3 p-5 rounded-2xl border border-navy/5 bg-navy/[0.01]">
+                <h4 className="text-sm font-bold text-navy border-b border-navy/10 pb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span className="bg-navy text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">SEC A</span>
+                  <span>Beneficiary Category</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {[
+                    'Orphaned Child (under 18, no living parent)',
+                    'Elderly Person (aged 60+, lacking adequate support)',
+                    'Widow / Widower',
+                    'Student from Disadvantaged Background',
+                    'Vulnerable Family / Child-Headed Household',
+                    'Other'
+                  ].map((catOpt) => {
+                    const isOtherOption = catOpt === 'Other';
+                    const activeMatch = isOtherOption ? welfareForm.category === 'Other' : welfareForm.category === catOpt;
+                    return (
+                      <div key={catOpt} className="flex items-center space-x-2">
+                        <input 
+                          type="radio" 
+                          name="beneficiary_category"
+                          id={`cat_${catOpt}`}
+                          checked={activeMatch}
+                          onChange={() => setWelfareForm(prev => ({ ...prev, category: catOpt }))}
+                          className="text-gold focus:ring-gold"
+                        />
+                        <label htmlFor={`cat_${catOpt}`} className="text-gray-700 cursor-pointer select-none">
+                          {catOpt}
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+                {welfareForm.category === 'Other' && (
+                  <div className="pt-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Please specify custom category:</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={welfareForm.category_other}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, category_other: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="Specify background details..."
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Section B */}
+              <div className="space-y-3 p-5 rounded-2xl border border-navy/5 bg-navy/[0.01]">
+                <h4 className="text-sm font-bold text-navy border-b border-navy/10 pb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span className="bg-navy text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">SEC B</span>
+                  <span>Personal Information</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Full Name</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={welfareForm.full_name}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, full_name: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="Beneficiary's full name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Date of Birth</label>
+                      <input 
+                        type="text" 
+                        value={welfareForm.date_of_birth}
+                        onChange={(e) => setWelfareForm(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                        placeholder="e.g. 1964-08-22"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Age</label>
+                      <input 
+                        type="number" 
+                        value={welfareForm.age}
+                        onChange={(e) => setWelfareForm(prev => ({ ...prev, age: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                        placeholder="Age"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Gender</label>
+                    <select 
+                      value={welfareForm.gender} 
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, gender: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">National ID / Birth Certificate No.</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.national_id}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, national_id: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="e.g. 59-192734K-59"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Phone (Self or Carer)</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.phone}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="e.g. +263 772 836 195"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Physical Address</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.physical_address}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, physical_address: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="House number, street name"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Area / Suburb</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.area_suburb}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, area_suburb: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="e.g. Epworth, Harare"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section C */}
+              <div className="space-y-3 p-5 rounded-2xl border border-navy/5 bg-navy/[0.01]">
+                <h4 className="text-sm font-bold text-navy border-b border-navy/10 pb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span className="bg-navy text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">SEC C</span>
+                  <span>Household & Background</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Living Situation</label>
+                    <select 
+                      value={welfareForm.living_situation} 
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, living_situation: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                    >
+                      <option value="Alone">Alone</option>
+                      <option value="With carer">With carer</option>
+                      <option value="With family">With family</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Carer / Guardian Name</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.carer_name}
+                      disabled={welfareForm.living_situation === 'Alone'}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, carer_name: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs disabled:bg-gray-100 disabled:text-gray-400 cursor-not-allowed"
+                      placeholder="If applicable"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Relationship to Beneficiary</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.carer_relationship}
+                      disabled={welfareForm.living_situation === 'Alone'}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, carer_relationship: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs disabled:bg-gray-100 disabled:text-gray-400 cursor-not-allowed"
+                      placeholder="e.g. Aunt, Grandmother"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Household Size</label>
+                    <input 
+                      type="number" 
+                      value={welfareForm.household_size}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, household_size: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="Total size"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs pt-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Monthly Household Income (USD)</label>
+                    <input 
+                      type="number" 
+                      value={welfareForm.monthly_income_usd}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, monthly_income_usd: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="Income in USD"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Monthly Household Income (ZWL)</label>
+                    <input 
+                      type="number" 
+                      value={welfareForm.monthly_income_zwl}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, monthly_income_zwl: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="Income in ZWL"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Primary Income Source / Support</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.income_source}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, income_source: e.target.value }))}
+                      className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                      placeholder="e.g. Selling veggies / None"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1 pt-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">Additional Context about Circumstances</label>
+                  <textarea 
+                    rows={2}
+                    value={welfareForm.circumstance_context}
+                    onChange={(e) => setWelfareForm(prev => ({ ...prev, circumstance_context: e.target.value }))}
+                    className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs font-sans"
+                    placeholder="Provide description of living, social and educational hardships..."
+                  />
+                </div>
+              </div>
+
+              {/* Section D */}
+              <div className="space-y-3 p-5 rounded-2xl border border-navy/5 bg-navy/[0.01]">
+                <h4 className="text-sm font-bold text-navy border-b border-navy/10 pb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span className="bg-navy text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">SEC D</span>
+                  <span>Support Requested</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {[
+                    "Food Parcel / Groceries",
+                    "Clothing / Blankets",
+                    "Hygiene & Toiletry Items",
+                    "School Fees or Educational Support",
+                    "School Supplies (stationery, uniforms, textbooks)",
+                    "Financial Assistance (cash)",
+                    "Medical Referral or Support",
+                    "Psychosocial / Counselling Support"
+                  ].map((supportOpt) => {
+                    const isCheckedOption = welfareForm.support_requested?.includes(supportOpt);
+                    return (
+                      <div key={supportOpt} className="flex items-center space-x-2">
+                        <input 
+                          type="checkbox" 
+                          id={`support_${supportOpt}`}
+                          checked={isCheckedOption}
+                          onChange={() => {
+                            if (isCheckedOption) {
+                              setWelfareForm(prev => ({
+                                ...prev,
+                                support_requested: (prev.support_requested || []).filter(i => i !== supportOpt)
+                              }));
+                            } else {
+                              setWelfareForm(prev => ({
+                                ...prev,
+                                support_requested: [...(prev.support_requested || []), supportOpt]
+                              }));
+                            }
+                          }}
+                          className="rounded text-gold focus:ring-gold"
+                        />
+                        <label htmlFor={`support_${supportOpt}`} className="text-gray-700 cursor-pointer select-none">
+                          {supportOpt}
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="pt-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Other requested support:</label>
+                  <input 
+                    type="text" 
+                    value={welfareForm.support_requested_other}
+                    onChange={(e) => setWelfareForm(prev => ({ ...prev, support_requested_other: e.target.value }))}
+                    className="w-full px-4 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                    placeholder="Specify other specific items..."
+                  />
+                </div>
+              </div>
+
+              {/* Section E */}
+              <div className="space-y-3 p-5 rounded-2xl border border-navy/5 bg-navy/[0.01]">
+                <h4 className="text-sm font-bold text-navy border-b border-navy/10 pb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span className="bg-navy text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">SEC E</span>
+                  <span>Verification and Outreach Officer</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Name of Verifier</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.verifier_name}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, verifier_name: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Role / Position</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.verifier_role}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, verifier_role: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Organisation</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.verifier_org}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, verifier_org: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs pt-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Verifier Phone</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.verifier_phone}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, verifier_phone: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Signature (Authorized Text Stamp)</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.verifier_signature}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, verifier_signature: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs font-serif italic text-navy font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Verification Date</label>
+                    <input 
+                      type="date" 
+                      value={welfareForm.verification_date}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, verification_date: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border outline-none focus:border-gold text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section F */}
+              <div className="space-y-3 p-5 rounded-2xl border border-amber-200 bg-amber-50/15">
+                <h4 className="text-sm font-bold text-amber-800 border-b border-amber-200 pb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span className="bg-amber-700 text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">SEC F</span>
+                  <span>Foundation Use Only (Admin Controls)</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Approved / Evaluated By</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.approved_by}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, approved_by: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-amber-200 outline-none focus:border-gold text-xs"
+                      placeholder="Name of approving trustee"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Date of Approval</label>
+                    <input 
+                      type="date" 
+                      value={welfareForm.approval_date}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, approval_date: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-amber-200 outline-none focus:border-gold text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs pt-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Support Package Allocated</label>
+                    <input 
+                      type="text" 
+                      value={welfareForm.allocated_package}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, allocated_package: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-amber-200 outline-none focus:border-gold text-xs"
+                      placeholder="e.g. Food Hamper A, FeesPaid"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Date of Distribution</label>
+                    <input 
+                      type="date" 
+                      value={welfareForm.distribution_date}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, distribution_date: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-amber-200 outline-none focus:border-gold text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Follow-up Date</label>
+                    <input 
+                      type="date" 
+                      value={welfareForm.follow_up_date}
+                      onChange={(e) => setWelfareForm(prev => ({ ...prev, follow_up_date: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-amber-200 outline-none focus:border-gold text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1 pt-2">
+                  <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wide block">Reviewer Notes</label>
+                  <textarea 
+                    rows={2}
+                    value={welfareForm.notes}
+                    onChange={(e) => setWelfareForm(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-amber-200 outline-none focus:border-gold text-xs font-sans"
+                    placeholder="Internal evaluation remarks..."
+                  />
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                <button 
+                  type="button"
+                  onClick={() => setIsRecordWelfareOpen(false)}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="px-6 py-2.5 bg-navy hover:bg-navy/90 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>{editingWelfareId ? 'Save Edits' : 'Register Beneficiary'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Welfare Intake Form Print/View Modal */}
+      {selectedWelfareForForm && (() => {
+        const w = selectedWelfareForForm;
+        return (
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4 font-sans text-left">
+            <div className="bg-white rounded-[2.5rem] p-6 md:p-10 w-full max-w-4xl border border-navy/5 shadow-2xl relative my-8">
+              <button 
+                onClick={() => setSelectedWelfareForForm(null)}
+                className="absolute top-5 right-5 text-gray-400 hover:text-navy hover:scale-105 transition-all text-sm font-bold bg-gray-100 p-2.5 rounded-full cursor-pointer print:hidden"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="border-4 border-dashed border-teal-200 bg-cream/10 p-6 md:p-8 rounded-3xl relative print-area overflow-hidden font-sans">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-center border-b-2 border-teal-600/20 pb-4 mb-4 gap-4">
+                  <div className="text-center md:text-left flex items-center space-x-4">
+                    <img src="/assets/logo.png" alt="Logo" className="h-12 w-auto object-contain hidden md:block" />
+                    <div>
+                      <h3 className="font-serif font-extrabold text-xl tracking-tight text-navy uppercase">Welfare Beneficiary Intake Form</h3>
+                      <span className="text-[10px] font-semibold text-teal-600 tracking-wider uppercase block mt-0.5">Humanitarian & Donation Support Programme — WILL-NAKS FOUNDATION</span>
+                      <span className="text-[9px] text-gray-400 block mt-0.5">PVO Registration No: 18/2023 | Harare, Zimbabwe</span>
+                    </div>
+                  </div>
+                  <div className="text-center md:text-right bg-navy text-white py-1.5 px-3 rounded-lg border-b-4 border-gold">
+                    <span className="text-[8px] uppercase tracking-widest block text-gold font-black">Reference No:</span>
+                    <span className="font-mono text-[11px] font-black tracking-wider">{w.reference_number || 'N/A'}</span>
+                  </div>
+                </div>
+
+                {/* Core Basic info */}
+                <div className="grid grid-cols-3 gap-4 pb-4 border-b border-gray-100 text-xs">
+                  <div>
+                    <span className="text-gray-400 font-bold text-[9px] uppercase block">Date of Intake</span>
+                    <span className="font-medium text-navy text-[11px]">{w.date_of_intake ? new Date(w.date_of_intake).toLocaleDateString() : 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 font-bold text-[9px] uppercase block">Recorded By</span>
+                    <span className="font-medium text-navy text-[11px]">{w.recorded_by || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 font-bold text-[9px] uppercase block">Assigned Welfare Specialist</span>
+                    <span className="font-medium text-teal-600 text-[11px]">Yvonne Kodzaimambo</span>
+                  </div>
+                </div>
+
+                {/* Sections detail layout */}
+                <div className="mt-4 space-y-4">
+                  
+                  {/* Section A */}
+                  <div className="border border-gray-100 rounded-xl p-3 bg-gray-50/40 text-xs">
+                    <h4 className="font-serif text-[11px] font-extrabold text-navy uppercase mb-1 flex items-center gap-1 leading-none">
+                      <span className="bg-navy text-white text-[8px] px-1 rounded">SECTION A</span>
+                      <span>BENEFICIARY CATEGORY</span>
+                    </h4>
+                    <p className="text-navy font-bold">{w.category === 'Other' ? (w.category_other || 'Other') : w.category}</p>
+                  </div>
+
+                  {/* Section B Box */}
+                  <div className="border border-gray-100 rounded-xl p-3 bg-gray-50/40 text-xs">
+                    <h4 className="font-serif text-[11px] font-extrabold text-navy uppercase mb-2 flex items-center gap-1 leading-none border-b border-gray-200 pb-1">
+                      <span className="bg-navy text-white text-[8px] px-1 rounded">SECTION B</span>
+                      <span>PERSONAL INFORMATION</span>
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Full Name:</span>
+                        <strong className="text-navy">{w.full_name || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Date of Birth:</span>
+                        <strong className="text-navy">{w.date_of_birth || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Age / Gender:</span>
+                        <strong className="text-navy">{w.age ? `${w.age} years` : 'N/A'} / {w.gender || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">National ID / Birth Cert No:</span>
+                        <strong className="text-navy">{w.national_id || 'N/A'}</strong>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-400 block text-[9px]">Physical Address:</span>
+                        <strong className="text-navy">{w.physical_address || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Area / Suburb:</span>
+                        <strong className="text-navy">{w.area_suburb || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Phone contact:</span>
+                        <strong className="text-navy">{w.phone || 'N/A'}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section C Box */}
+                  <div className="border border-gray-100 rounded-xl p-3 bg-gray-50/40 text-xs">
+                    <h4 className="font-serif text-[11px] font-extrabold text-navy uppercase mb-2 flex items-center gap-1 leading-none border-b border-gray-200 pb-1">
+                      <span className="bg-navy text-white text-[8px] px-1 rounded">SECTION C</span>
+                      <span>HOUSEHOLD & BACKGROUND</span>
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] mb-2">
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Living Situation:</span>
+                        <strong className="text-navy">{w.living_situation || 'With family'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Carer / Guardian Name:</span>
+                        <strong className="text-navy">{w.carer_name || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Relationship of Carer:</span>
+                        <strong className="text-navy">{w.carer_relationship || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Household Size:</span>
+                        <strong className="text-navy">{w.household_size || '1'} people</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px]">Est. monthly income:</span>
+                        <strong className="text-teal-700">USD {w.monthly_income_usd || '0'} / ZWL {w.monthly_income_zwl || '0'}</strong>
+                      </div>
+                      <div className="col-span-3">
+                        <span className="text-gray-400 block text-[9px]">Primary source of support:</span>
+                        <strong className="text-navy">{w.income_source || 'None'}</strong>
+                      </div>
+                    </div>
+                    {w.circumstance_context && (
+                      <div className="pt-1.5 border-t border-gray-100">
+                        <span className="text-gray-400 block text-[9px]">Additional context remarks:</span>
+                        <p className="text-navy text-[10px] italic leading-relaxed">{w.circumstance_context}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section D Box */}
+                  <div className="border border-gray-100 rounded-xl p-3 bg-gray-50/40 text-xs">
+                    <h4 className="font-serif text-[11px] font-extrabold text-navy uppercase mb-1 flex items-center gap-1 leading-none">
+                      <span className="bg-navy text-white text-[8px] px-1 rounded">SECTION D</span>
+                      <span>SUPPORT REQUESTED (TICKED ASSISTANCE CHANNELS)</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5 text-[9px]">
+                      {Array.isArray(w.support_requested) && w.support_requested.map((item: string) => (
+                        <span key={item} className="bg-navy text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider block">
+                          ✓ {item}
+                        </span>
+                      ))}
+                      {w.support_requested_other && (
+                        <span className="bg-teal-600 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider block">
+                          ✓ Custom: {w.support_requested_other}
+                        </span>
+                      )}
+                      {(!w.support_requested || w.support_requested.length === 0) && !w.support_requested_other && (
+                        <span className="text-gray-400 font-sans italic">No categories explicitly ticked.</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Section E Box */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border border-gray-100 rounded-xl p-3 bg-gray-50/40 text-xs">
+                      <h4 className="font-serif text-[11px] font-extrabold text-navy uppercase mb-2 flex items-center gap-1 leading-none border-b border-gray-200 pb-1">
+                        <span className="bg-navy text-white text-[8px] px-1 rounded">SECTION E</span>
+                        <span>VERIFICATION & DISPATCH</span>
+                      </h4>
+                      <div className="space-y-1 text-[10px] text-gray-700">
+                        <div>Verifier Name: <strong className="text-navy">{w.verifier_name || 'Yvonne Kodzaimambo'}</strong> ({w.verifier_role || 'Administrative Officer'})</div>
+                        <div>Organisation: <strong className="text-navy">{w.verifier_org || 'WILL-NAKS FOUNDATION'}</strong></div>
+                        <div>Phone contact: <strong className="text-navy">{w.verifier_phone || '+263772836263'}</strong></div>
+                        <div className="pt-1.5 border-t border-dashed mt-1">
+                          Signature confirmation stamp:<br/>
+                          <strong className="font-serif italic text-blue-600 tracking-wider text-xs block mt-0.5">✓ {w.verifier_signature || 'Confirmed digitally'}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section F Box */}
+                    <div className="border border-amber-200 rounded-xl p-3 bg-amber-50/20 text-xs">
+                      <h4 className="font-serif text-[11px] font-extrabold text-amber-900 uppercase mb-2 flex items-center gap-1 leading-none border-b border-amber-200 pb-1">
+                        <span className="bg-amber-700 text-white text-[8px] px-1 rounded">SECTION F</span>
+                        <span>FOUNDATION USE ONLY</span>
+                      </h4>
+                      <div className="space-y-1 text-[10px] text-gray-700">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>Approved By: <strong className="text-navy">{w.approved_by || 'Pending Review'}</strong></div>
+                          <div>Approval Date: <strong className="text-navy">{w.approval_date ? new Date(w.approval_date).toLocaleDateString() : 'N/A'}</strong></div>
+                        </div>
+                        <div>Support Package Allocated: <strong className="text-navy">{w.allocated_package || 'N/A'}</strong></div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>Distribution Date: <strong className="text-navy">{w.distribution_date ? new Date(w.distribution_date).toLocaleDateString() : 'N/A'}</strong></div>
+                          <div>Follow-up Date: <strong className="text-navy">{w.follow_up_date ? new Date(w.follow_up_date).toLocaleDateString() : 'N/A'}</strong></div>
+                        </div>
+                        {w.notes && <div className="mt-1 pt-1 border-t border-amber-200/50">Admin Notes: <span className="text-gray-600 italic">{w.notes}</span></div>}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <div className="my-3 p-2 bg-navy/[0.01] border border-gray-100 rounded-lg text-[8px] text-gray-400 text-center leading-relaxed font-sans mt-4">
+                  <strong>Confidentiality Policy:</strong> All beneficiary information gathered on this intake is treated with strict confidentiality in adherence to the WILL-NAKS FOUNDATION Data Protection Policy and PVO regulatory obligations. Access is restricted to authorized personnel.
+                </div>
+              </div>
+
+              <div className="mt-6 flex space-x-3 print:hidden justify-end">
+                <button 
+                  onClick={() => setSelectedWelfareForForm(null)}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                >
+                  Close View
+                </button>
+                <button 
+                  onClick={() => window.print()}
+                  className="px-6 py-2.5 bg-navy hover:bg-navy/95 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print Intake Form</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+      {isRecordDonationOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4 font-sans text-left">
+          <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-2xl border border-navy/5 shadow-2xl relative">
+            <button 
+              onClick={() => setIsRecordDonationOpen(false)}
+              className="absolute top-5 right-5 text-gray-400 hover:text-navy hover:scale-105 transition-all text-sm font-bold bg-gray-100 p-2 rounded-full cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-2xl font-serif font-bold text-navy mb-1 italic">
+              Record Donation & Generate Receipt
+            </h3>
+            <p className="text-xs text-gray-500 mb-6">Enter cash, goods or online donations. This creates a secure persistent database ledger record and a downloadable receipt.</p>
+
+            <form onSubmit={saveManualDonation} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Donor Full Name</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={newDonationForm.full_name}
+                    onChange={(e) => setNewDonationForm(prev => ({ ...prev, full_name: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none focus:bg-white border focus:border-gold text-sm" 
+                    placeholder="e.g. Tendai Moyo" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Donor Email</label>
+                  <input 
+                    type="email" 
+                    value={newDonationForm.email}
+                    onChange={(e) => setNewDonationForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none focus:bg-white border focus:border-gold text-sm" 
+                    placeholder="e.g. tendai@gmail.com" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Donor Phone</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={newDonationForm.phone}
+                    onChange={(e) => setNewDonationForm(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none focus:bg-white border focus:border-gold text-sm" 
+                    placeholder="+263 775 386 704" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Donor Home Address</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={newDonationForm.address}
+                    onChange={(e) => setNewDonationForm(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none focus:bg-white border focus:border-gold text-sm" 
+                    placeholder="e.g. Samora Machel Ave, Harare" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Donation Type</label>
+                  <select 
+                    value={newDonationForm.donation_type}
+                    onChange={(e) => setNewDonationForm(prev => ({ ...prev, donation_type: e.target.value as any }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border focus:border-gold focus:bg-white text-sm font-sans"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Goods">Goods</option>
+                    <option value="In-Kind">In-Kind</option>
+                    <option value="Online">Online</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Received & Logs By Staff</label>
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={newDonationForm.received_by}
+                    className="w-full px-4 py-3 bg-gray-100 rounded-xl outline-none border focus:border-gold text-sm text-gray-400 cursor-not-allowed font-medium" 
+                  />
+                </div>
+              </div>
+
+              {(newDonationForm.donation_type === 'Online' || newDonationForm.donation_type === 'Cash') ? (
+                <div className="grid grid-cols-2 gap-4 bg-emerald-50/20 p-4 rounded-xl border border-emerald-100">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-navy uppercase tracking-wider block">Amount (USD)</label>
+                    <input 
+                      required
+                      type="number" 
+                      min="1"
+                      value={newDonationForm.amount_usd}
+                      onChange={(e) => setNewDonationForm(prev => ({ ...prev, amount_usd: e.target.value }))}
+                      className="w-full px-4 py-3 bg-white rounded-xl outline-none border focus:border-gold text-sm font-bold font-mono text-green-700" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Amount (ZWL / Alternative)</label>
+                    <input 
+                      type="text" 
+                      value={newDonationForm.amount_zwl}
+                      onChange={(e) => setNewDonationForm(prev => ({ ...prev, amount_zwl: e.target.value }))}
+                      className="w-full px-4 py-3 bg-white rounded-xl outline-none border focus:border-gold text-sm font-mono" 
+                      placeholder="e.g. 5000 ZWL" 
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 bg-gold/5 p-4 rounded-xl border border-gold/10">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-navy uppercase tracking-wider block">Description of Goods</label>
+                    <textarea 
+                      required
+                      value={newDonationForm.goods_description}
+                      onChange={(e) => setNewDonationForm(prev => ({ ...prev, goods_description: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-white rounded-xl outline-none border focus:border-gold text-sm h-16 resize-none leading-tight" 
+                      placeholder="e.g. 15 math books, 2 cartons of writing pads" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Estimated Value (USD)</label>
+                    <input 
+                      required
+                      type="text" 
+                      value={newDonationForm.estimated_value}
+                      onChange={(e) => setNewDonationForm(prev => ({ ...prev, estimated_value: e.target.value }))}
+                      className="w-full px-4 py-3 bg-white rounded-xl outline-none border focus:border-gold text-sm" 
+                      placeholder="e.g. $100 USD" 
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Donation Programme / Custom Purpose</label>
+                <select 
+                  value={newDonationForm.purpose}
+                  onChange={(e) => setNewDonationForm(prev => ({ ...prev, purpose: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none focus:bg-white border focus:border-gold text-sm"
+                >
+                  <option value="Disadvantaged Orphans Scholarship Fund">Disadvantaged Orphans Scholarship Fund</option>
+                  <option value="Primary & Secondary School Fees Assistance">Primary & Secondary School Fees Assistance</option>
+                  <option value="Underprivileged Student Mentorship Programme">Underprivileged Student Mentorship Programme</option>
+                  <option value="Elderly and Widows Caring Packages">Elderly and Widows Caring Packages</option>
+                  <option value="General registered humanitarian funds">General registered humanitarian funds</option>
+                </select>
+              </div>
+
+              <button 
+                type="submit"
+                className="w-full py-4 bg-navy text-white rounded-2xl font-bold hover:bg-navy/95 transition-all text-sm mt-4 flex items-center justify-center space-x-2"
+              >
+                <span>Record Ledger Donation & Print Receipt</span>
               </button>
             </form>
           </div>

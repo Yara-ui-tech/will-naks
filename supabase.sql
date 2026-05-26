@@ -1,7 +1,7 @@
 -- Enable Realtime for all tables safely
 DO $$ 
 DECLARE
-  table_list TEXT[] := ARRAY['contacts', 'donations', 'gallery', 'testimonials', 'profiles', 'scholarships', 'partners', 'volunteers', 'news', 'team', 'events', 'impact_stories', 'members', 'social_links', 'deductions'];
+  table_list TEXT[] := ARRAY['contacts', 'donations', 'gallery', 'testimonials', 'profiles', 'scholarships', 'partners', 'volunteers', 'news', 'team', 'events', 'impact_stories', 'members', 'social_links', 'deductions', 'welfare_beneficiaries'];
   t TEXT;
 BEGIN
   FOR t IN SELECT unnest(table_list) LOOP
@@ -423,5 +423,67 @@ CREATE POLICY "Public view deductions" ON public.deductions FOR SELECT USING (tr
 -- Allow admins full control over disbursement tracking
 DROP POLICY IF EXISTS "Admins manage deductions" ON public.deductions;
 CREATE POLICY "Admins manage deductions" ON public.deductions FOR ALL USING (public.is_admin());
+
+
+-- 17. Welfare Beneficiary Intake Table
+CREATE TABLE IF NOT EXISTS public.welfare_beneficiaries (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  reference_number TEXT NOT NULL UNIQUE,
+  date_of_intake DATE DEFAULT CURRENT_DATE,
+  recorded_by TEXT DEFAULT 'Yvonne Kodzaimambo',
+  
+  -- Section A
+  category TEXT NOT NULL, -- e.g. 'Orphaned Child', etc.
+  category_other TEXT,
+  
+  -- Section B
+  full_name TEXT NOT NULL,
+  date_of_birth TEXT,
+  age INTEGER,
+  gender TEXT,
+  national_id TEXT,
+  physical_address TEXT,
+  area_suburb TEXT,
+  phone TEXT,
+  
+  -- Section C
+  living_situation TEXT, -- 'Alone', 'With carer', 'With family'
+  carer_name TEXT,
+  carer_relationship TEXT,
+  household_size INTEGER,
+  monthly_income_usd NUMERIC DEFAULT 0,
+  monthly_income_zwl NUMERIC DEFAULT 0,
+  income_source TEXT,
+  circumstance_context TEXT,
+  
+  -- Section D
+  support_requested TEXT[], -- Array of selected options e.g. ['Food Parcel']
+  support_requested_other TEXT,
+  
+  -- Section E
+  verifier_name TEXT,
+  verifier_role TEXT,
+  verifier_org TEXT,
+  verifier_phone TEXT,
+  verifier_signature TEXT,
+  verification_date DATE,
+  
+  -- Section F
+  approved_by TEXT,
+  approval_date DATE,
+  allocated_package TEXT,
+  distribution_date DATE,
+  follow_up_date DATE,
+  notes TEXT
+);
+
+-- Enable RLS
+ALTER TABLE public.welfare_beneficiaries ENABLE ROW LEVEL SECURITY;
+
+-- Allow public view of beneficiaries for admin lookups (admins retrieve data) or restrict
+DROP POLICY IF EXISTS "Admins manage welfare_beneficiaries" ON public.welfare_beneficiaries;
+CREATE POLICY "Admins manage welfare_beneficiaries" ON public.welfare_beneficiaries FOR ALL USING (public.is_admin());
+
 
 

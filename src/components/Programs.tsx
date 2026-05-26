@@ -60,8 +60,8 @@ export default function Programs() {
 
         <div className="mt-20 text-center">
             <a 
-              href="#contact" 
-              className="inline-flex items-center px-10 py-5 bg-navy text-white rounded-full font-bold hover:bg-navy/90 transition-all transform hover:scale-105 shadow-xl hover:shadow-navy/20"
+              href="/support?tab=scholarship" 
+              className="inline-flex items-center px-10 py-5 bg-gold text-navy rounded-full font-bold hover:bg-gold-light transition-all transform hover:scale-105 shadow-xl hover:shadow-gold/25"
             >
               Apply for Scholarship <Icons.ExternalLink className="ml-2 h-5 w-5" />
             </a>
