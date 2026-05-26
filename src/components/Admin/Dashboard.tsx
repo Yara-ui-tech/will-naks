@@ -3202,26 +3202,16 @@ CREATE POLICY "Admins manage deductions" ON public.deductions FOR ALL TO public 
 DROP POLICY IF EXISTS "Admins manage welfare_beneficiaries" ON public.welfare_beneficiaries;
 CREATE POLICY "Admins manage welfare_beneficiaries" ON public.welfare_beneficiaries FOR ALL TO public USING (public.is_admin());
 
--- D. SETUP STORAGE BUCKET AND ROBUST OBJECT RLS POLICIES 
+-- D. SETUP STORAGE BUCKET
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('images', 'images', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Enable RLS on storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Public View Images" ON storage.objects;
-DROP POLICY IF EXISTS "Public Insert Images" ON storage.objects;
-DROP POLICY IF EXISTS "Public Update Images" ON storage.objects;
-DROP POLICY IF EXISTS "Public Delete Images" ON storage.objects;
-
-CREATE POLICY "Public View Images" ON storage.objects FOR SELECT TO public USING (bucket_id = 'images');
-CREATE POLICY "Public Insert Images" ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'images');
-CREATE POLICY "Public Update Images" ON storage.objects FOR UPDATE TO public USING (bucket_id = 'images') WITH CHECK (bucket_id = 'images');
-CREATE POLICY "Public Delete Images" ON storage.objects FOR DELETE TO public USING (bucket_id = 'images');
+-- Note: Storage policies (RLS on storage.objects) should be configured directly via the
+-- Supabase Dashboard under Storage -> Policies if they're not set to allow public operations.
 
 -- E. RELOAD SCHEMA CACHE TO INSTANTLY APPLY UPDATES
-NOTIFY pgrst, 'reload schema';`}
+NOTIFY pgrst, 'reload schema';`},TargetContent:
             </pre>
 
             <div className="mt-3 flex items-center gap-2 text-[10px] text-green-600 font-semibold uppercase tracking-wider">

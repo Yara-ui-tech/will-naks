@@ -350,38 +350,11 @@ CREATE POLICY "Admins manage social_links" ON social_links FOR ALL USING (is_adm
 
 -- 15. Storage Setup for Images
 -- Note: This requires the storage extension to be enabled (usually enabled by default in Supabase)
+-- IMPORTANT: Storage policies (RLS on storage.objects) should be configured directly via the 
+-- Supabase Dashboard under Storage -> Policies to prevent RLS/ownership restriction errors during direct SQL run.
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('images', 'images', true)
 ON CONFLICT (id) DO NOTHING;
-
--- Enable RLS on storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- Storage Policies for 'images' bucket
-DROP POLICY IF EXISTS "Public View Images" ON storage.objects;
-DROP POLICY IF EXISTS "Admins Manage Images" ON storage.objects;
-DROP POLICY IF EXISTS "Admins Insert Images" ON storage.objects;
-DROP POLICY IF EXISTS "Admins Update Images" ON storage.objects;
-DROP POLICY IF EXISTS "Admins Delete Images" ON storage.objects;
-DROP POLICY IF EXISTS "Public Insert Images" ON storage.objects;
-DROP POLICY IF EXISTS "Public Update Images" ON storage.objects;
-DROP POLICY IF EXISTS "Public Delete Images" ON storage.objects;
-
--- Allow anyone to select/view images in the public 'images' bucket
-CREATE POLICY "Public View Images" ON storage.objects
-  FOR SELECT TO public USING (bucket_id = 'images');
-
--- Allow anyone to upload images to the public 'images' bucket
-CREATE POLICY "Public Insert Images" ON storage.objects
-  FOR INSERT TO public WITH CHECK (bucket_id = 'images');
-
--- Allow anyone to update images in the public 'images' bucket
-CREATE POLICY "Public Update Images" ON storage.objects
-  FOR UPDATE TO public USING (bucket_id = 'images') WITH CHECK (bucket_id = 'images');
-
--- Allow anyone to delete images in the public 'images' bucket
-CREATE POLICY "Public Delete Images" ON storage.objects
-  FOR DELETE TO public USING (bucket_id = 'images');
 
 
 -- Retroactive fixes to ensure columns exist on historical installations
