@@ -354,11 +354,11 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('images', 'images', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Enable RLS on storage.objects
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
 -- Storage Policies for 'images' bucket
 DROP POLICY IF EXISTS "Public View Images" ON storage.objects;
-CREATE POLICY "Public View Images" ON storage.objects
-  FOR SELECT USING (bucket_id = 'images');
-
 DROP POLICY IF EXISTS "Admins Manage Images" ON storage.objects;
 DROP POLICY IF EXISTS "Admins Insert Images" ON storage.objects;
 DROP POLICY IF EXISTS "Admins Update Images" ON storage.objects;
@@ -367,20 +367,28 @@ DROP POLICY IF EXISTS "Public Insert Images" ON storage.objects;
 DROP POLICY IF EXISTS "Public Update Images" ON storage.objects;
 DROP POLICY IF EXISTS "Public Delete Images" ON storage.objects;
 
+-- Allow anyone to select/view images in the public 'images' bucket
+CREATE POLICY "Public View Images" ON storage.objects
+  FOR SELECT TO public USING (bucket_id = 'images');
+
 -- Allow anyone to upload images to the public 'images' bucket
 CREATE POLICY "Public Insert Images" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'images');
+  FOR INSERT TO public WITH CHECK (bucket_id = 'images');
 
 -- Allow anyone to update images in the public 'images' bucket
 CREATE POLICY "Public Update Images" ON storage.objects
-  FOR UPDATE USING (bucket_id = 'images');
+  FOR UPDATE TO public USING (bucket_id = 'images') WITH CHECK (bucket_id = 'images');
 
 -- Allow anyone to delete images in the public 'images' bucket
 CREATE POLICY "Public Delete Images" ON storage.objects
-  FOR DELETE USING (bucket_id = 'images');
+  FOR DELETE TO public USING (bucket_id = 'images');
 
 
 -- Retroactive fixes to ensure columns exist on historical installations
+ALTER TABLE public.donations ADD COLUMN IF NOT EXISTS donor_name TEXT;
+ALTER TABLE public.donations ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.donations ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'pending';
+
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS website_url TEXT;
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS logo_url TEXT;
@@ -401,6 +409,8 @@ ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS carer_details TEXT;
 ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS subjects_strength TEXT;
 ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS career_aspirations TEXT;
 ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS chosen_programs TEXT[];
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS is_biological TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS caretaker_context TEXT;
 
 
 -- 16. Deductions / Fund Disbursements Table (Transparency Tracker)
@@ -484,6 +494,9 @@ ALTER TABLE public.welfare_beneficiaries ENABLE ROW LEVEL SECURITY;
 -- Allow public view of beneficiaries for admin lookups (admins retrieve data) or restrict
 DROP POLICY IF EXISTS "Admins manage welfare_beneficiaries" ON public.welfare_beneficiaries;
 CREATE POLICY "Admins manage welfare_beneficiaries" ON public.welfare_beneficiaries FOR ALL USING (public.is_admin());
+
+-- Notify PostgREST to reload schema cache
+NOTIFY pgrst, 'reload schema';
 
 
 

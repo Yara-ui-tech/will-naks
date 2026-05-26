@@ -138,6 +138,7 @@ export default function Support() {
   const [createdDonation, setCreatedDonation] = useState<any>(null);
   
   // Scholarship Attachments States
+  const [isBiological, setIsBiological] = useState<string>('yes');
   const [birthCertUrl, setBirthCertUrl] = useState<string | null>(null);
   const [uploadingBirthCert, setUploadingBirthCert] = useState(false);
   const [academicReportUrl, setAcademicReportUrl] = useState<string | null>(null);
@@ -270,7 +271,8 @@ export default function Support() {
         const compositeNationality = `${data.nationality || 'Zimbabwean'} [Address: ${data.home_address || 'N/A'}]`;
         const compositeSubjectsStrength = `${data.subjects_strength || ''} [PrevResult: ${data.previous_result || 'N/A'}]`;
         const carerText = data.carer_details ? (data.carer_details as string) : '';
-        const compositeCarerDetails = `${carerText} [BirthCert: ${birthCertUrl || ''}] [Transcript: ${academicReportUrl || ''}] [Photo: ${applicantPhotoUrl || ''}] [HardshipLetter: ${hardshipLetterUrl || ''}]`;
+        const caretakerContextStr = data.caretaker_context ? ` [Is Biological: ${data.is_biological || 'N/A'}] [Caretaker Arrangement Details: ${data.caretaker_context}]` : '';
+        const compositeCarerDetails = `${carerText}${caretakerContextStr} [BirthCert: ${birthCertUrl || ''}] [Transcript: ${academicReportUrl || ''}] [Photo: ${applicantPhotoUrl || ''}] [HardshipLetter: ${hardshipLetterUrl || ''}]`.trim();
 
         const { error } = await supabase.from('scholarships').insert([{
           full_name: data.full_name,
@@ -293,7 +295,9 @@ export default function Support() {
           carer_details: compositeCarerDetails,
           subjects_strength: compositeSubjectsStrength,
           career_aspirations: data.career_aspirations || null,
-          chosen_programs: chosen_programs.length > 0 ? chosen_programs : null
+          chosen_programs: chosen_programs.length > 0 ? chosen_programs : null,
+          is_biological: data.is_biological || 'yes',
+          caretaker_context: data.caretaker_context || null
         }]);
         if (error) throw error;
       } else if (activeTab === 'donate') {
@@ -859,9 +863,57 @@ export default function Support() {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">If yes, details of caretakers / hardship</label>
-                          <input name="carer_details" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Provide context of current care" />
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Orphan status - caretakers / hardship details</label>
+                          <input name="carer_details" type="text" className="w-full px-5 py-3.5 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold text-sm font-sans" placeholder="Provide context of current care status" />
                         </div>
+                      </div>
+
+                      {/* Guardian Caring for Non-Biological Child Section */}
+                      <div className="bg-gold/5 border border-gold/20 p-6 rounded-2xl space-y-4">
+                        <div>
+                          <label className="text-xs font-bold text-navy uppercase tracking-wider block">Caretaker / Guardian Information for Non-Biological Children</label>
+                          <p className="text-xs text-gray-500 mt-1">If you are a caretaker or community member taking care of a child who is NOT your biological child (e.g., an orphaned relative, a foster child, or a neighbor's child), please tell us below.</p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <label className="text-xs font-bold text-gray-700 block mb-1">Is this applicant student your biological child?</label>
+                          <div className="flex flex-wrap gap-6 text-sm text-gray-700 font-semibold">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="is_biological" 
+                                value="yes" 
+                                checked={isBiological === 'yes'} 
+                                onChange={() => setIsBiological('yes')}
+                                className="accent-gold h-4 w-4" 
+                              />
+                              <span>Yes, they are my biological child</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="is_biological" 
+                                value="no" 
+                                checked={isBiological === 'no'} 
+                                onChange={() => setIsBiological('no')}
+                                className="accent-gold h-4 w-4" 
+                              />
+                              <span>No, I am taking care of this child (Caretaker / Guardian / Sponsor)</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {isBiological === 'no' && (
+                          <div className="space-y-2 mt-4">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block ml-1">Caretaker arrangement context & child's background <span className="text-red-500">*</span></label>
+                            <textarea 
+                              required={isBiological === 'no'}
+                              name="caretaker_context" 
+                              className="w-full px-5 py-4 bg-cream/35 rounded-xl outline-none border border-navy/5 focus:ring-2 focus:ring-gold h-28 text-sm font-sans" 
+                              placeholder="Please explain the child's circumstances (e.g., late parents, abandonment), your relationship to them (e.g., grandmother, aunt, caring community neighbor), and details of their custody arrangement."
+                            ></textarea>
+                          </div>
+                        )}
                       </div>
                     </div>
 

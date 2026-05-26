@@ -1248,12 +1248,26 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                       <div><span className="text-gray-400 font-medium">Monthly Income:</span> {s.monthly_income || 'N/A'}</div>
                       <div><span className="text-gray-400 font-medium">Dependants:</span> {s.dependants_count ?? 'N/A'}</div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-gray-400 font-medium">Orphan:</span>{' '}
+                        <span className="text-gray-400 font-medium font-sans">Orphan:</span>{' '}
                         <span className={`font-bold uppercase text-[9px] px-1.5 py-0.5 rounded ${s.is_orphan ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
                           {s.is_orphan ? 'Yes' : 'No'}
                         </span>
                       </div>
                       {carerTextOnly && <div><span className="text-gray-400 font-medium">Care/Hardship:</span> {carerTextOnly}</div>}
+                      {s.is_biological && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-gray-400 font-medium font-sans">Biological Student:</span>{' '}
+                          <span className={`font-bold uppercase text-[9px] px-1.5 py-0.5 rounded ${s.is_biological === 'no' ? 'bg-[#ff9e00]/10 text-[#d47000]' : 'bg-green-50 text-green-700'}`}>
+                            {s.is_biological === 'no' ? 'No (Caretaker Request)' : 'Yes'}
+                          </span>
+                        </div>
+                      )}
+                      {s.is_biological === 'no' && s.caretaker_context && (
+                        <div className="mt-1.5 bg-gold/5 p-2.5 rounded-xl border border-gold/15 text-[11px] text-navy italic leading-relaxed">
+                          <span className="font-bold uppercase text-[9px] tracking-wider text-gold not-italic block mb-0.5">Caretaker Arrangement Context:</span>
+                          "{s.caretaker_context}"
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -3075,10 +3089,33 @@ function OverviewStats({ data }: any) {
             </div>
 
             <pre className="p-4 bg-gray-900 text-gray-100 border border-gray-800 rounded-2xl text-[11px] font-mono overflow-x-auto select-all max-h-96 scrollbar-thin whitespace-pre leading-normal">
-{`-- A. FIX MISSING COLUMN error on updates
+{`-- A. FIX MISSING COLUMNS & ENSURE SCHEMA HEALTH
+ALTER TABLE public.donations ADD COLUMN IF NOT EXISTS donor_name TEXT;
+ALTER TABLE public.donations ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.donations ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'pending';
+
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS website_url TEXT;
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS logo_url TEXT;
+
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS date_of_birth TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS age INTEGER;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS gender TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS nationality TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS birth_cert_no TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS parent_name TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS parent_relationship TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS parent_occupation TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS monthly_income TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS dependants_count INTEGER;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS is_orphan BOOLEAN DEFAULT false;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS carer_details TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS subjects_strength TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS career_aspirations TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS chosen_programs TEXT[];
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS is_biological TEXT;
+ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS caretaker_context TEXT;
 
 -- B. CREATE 'deductions' table for budget disbursement metrics
 CREATE TABLE IF NOT EXISTS public.deductions (
@@ -3090,35 +3127,101 @@ CREATE TABLE IF NOT EXISTS public.deductions (
   project_lead TEXT DEFAULT 'N/A'
 );
 
--- Enable RLS for deductions
+-- C. ENABLE ROW LEVEL SECURITY & DEFINE TABLE POLICIES
+ALTER TABLE public.donations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scholarships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.volunteers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.deductions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.welfare_beneficiaries ENABLE ROW LEVEL SECURITY;
 
--- Allow public viewing of disbursements (transparency)
+-- 1. Donations Policies
+DROP POLICY IF EXISTS "Allow public view donations" ON public.donations;
+CREATE POLICY "Allow public view donations" ON public.donations FOR SELECT TO public USING (true);
+DROP POLICY IF EXISTS "Allow public insert donations" ON public.donations;
+CREATE POLICY "Allow public insert donations" ON public.donations FOR INSERT TO public WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage donations" ON public.donations;
+CREATE POLICY "Admins manage donations" ON public.donations FOR ALL TO public USING (public.is_admin());
+
+-- 2. Partners Policies
+DROP POLICY IF EXISTS "Public view partners" ON public.partners;
+CREATE POLICY "Public view partners" ON public.partners FOR SELECT TO public USING (true);
+DROP POLICY IF EXISTS "Public insert partners" ON public.partners;
+CREATE POLICY "Public insert partners" ON public.partners FOR INSERT TO public WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage partners" ON public.partners;
+CREATE POLICY "Admins manage partners" ON public.partners FOR ALL TO public USING (public.is_admin());
+
+-- 3. Scholarships Policies
+DROP POLICY IF EXISTS "Public view scholarships" ON public.scholarships;
+CREATE POLICY "Public view scholarships" ON public.scholarships FOR SELECT TO public USING (true);
+DROP POLICY IF EXISTS "Public insert scholarships" ON public.scholarships;
+CREATE POLICY "Public insert scholarships" ON public.scholarships FOR INSERT TO public WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage scholarships" ON public.scholarships;
+CREATE POLICY "Admins manage scholarships" ON public.scholarships FOR ALL TO public USING (public.is_admin());
+
+-- 4. Volunteers Policies
+DROP POLICY IF EXISTS "Public view volunteers" ON public.volunteers;
+CREATE POLICY "Public view volunteers" ON public.volunteers FOR SELECT TO public USING (true);
+DROP POLICY IF EXISTS "Public insert volunteers" ON public.volunteers;
+CREATE POLICY "Public insert volunteers" ON public.volunteers FOR INSERT TO public WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage volunteers" ON public.volunteers;
+CREATE POLICY "Admins manage volunteers" ON public.volunteers FOR ALL TO public USING (public.is_admin());
+
+-- 5. Contacts Policies
+DROP POLICY IF EXISTS "Allow public insert contacts" ON public.contacts;
+CREATE POLICY "Allow public insert contacts" ON public.contacts FOR INSERT TO public WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage contacts" ON public.contacts;
+CREATE POLICY "Admins manage contacts" ON public.contacts FOR ALL TO public USING (public.is_admin());
+
+-- 6. Testimonials Policies
+DROP POLICY IF EXISTS "Allow public view approved testimonials" ON public.testimonials;
+CREATE POLICY "Allow public view approved testimonials" ON public.testimonials FOR SELECT TO public USING (is_approved = true);
+DROP POLICY IF EXISTS "Allow public insert testimonials" ON public.testimonials;
+CREATE POLICY "Allow public insert testimonials" ON public.testimonials FOR INSERT TO public WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage testimonials" ON public.testimonials;
+CREATE POLICY "Admins manage testimonials" ON public.testimonials FOR ALL TO public USING (public.is_admin());
+
+-- 7. Members Policies
+DROP POLICY IF EXISTS "Public view members" ON public.members;
+CREATE POLICY "Public view members" ON public.members FOR SELECT TO public USING (true);
+DROP POLICY IF EXISTS "Public insert members" ON public.members;
+CREATE POLICY "Public insert members" ON public.members FOR INSERT TO public WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins manage members" ON public.members;
+CREATE POLICY "Admins manage members" ON public.members FOR ALL TO public USING (public.is_admin());
+
+-- 8. Deductions Policies
 DROP POLICY IF EXISTS "Public view deductions" ON public.deductions;
-CREATE POLICY "Public view deductions" ON public.deductions FOR SELECT USING (true);
-
--- Allow administrators full control
+CREATE POLICY "Public view deductions" ON public.deductions FOR SELECT TO public USING (true);
 DROP POLICY IF EXISTS "Admins manage deductions" ON public.deductions;
-CREATE POLICY "Admins manage deductions" ON public.deductions FOR ALL USING (public.is_admin());
+CREATE POLICY "Admins manage deductions" ON public.deductions FOR ALL TO public USING (public.is_admin());
 
--- C. SETUP Storage Bucket and Policies if not present already
+-- 9. Welfare Beneficiaries Policies
+DROP POLICY IF EXISTS "Admins manage welfare_beneficiaries" ON public.welfare_beneficiaries;
+CREATE POLICY "Admins manage welfare_beneficiaries" ON public.welfare_beneficiaries FOR ALL TO public USING (public.is_admin());
+
+-- D. SETUP STORAGE BUCKET AND ROBUST OBJECT RLS POLICIES 
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('images', 'images', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Enable RLS on storage.objects
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS "Public View Images" ON storage.objects;
-DROP POLICY IF EXISTS "Admins Manage Images" ON storage.objects;
-DROP POLICY IF EXISTS "Admins Insert Images" ON storage.objects;
-DROP POLICY IF EXISTS "Admins Update Images" ON storage.objects;
-DROP POLICY IF EXISTS "Admins Delete Images" ON storage.objects;
 DROP POLICY IF EXISTS "Public Insert Images" ON storage.objects;
 DROP POLICY IF EXISTS "Public Update Images" ON storage.objects;
 DROP POLICY IF EXISTS "Public Delete Images" ON storage.objects;
 
-CREATE POLICY "Public View Images" ON storage.objects FOR SELECT USING (bucket_id = 'images');
-CREATE POLICY "Public Insert Images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'images');
-CREATE POLICY "Public Update Images" ON storage.objects FOR UPDATE USING (bucket_id = 'images');
-CREATE POLICY "Public Delete Images" ON storage.objects FOR DELETE USING (bucket_id = 'images');`}
+CREATE POLICY "Public View Images" ON storage.objects FOR SELECT TO public USING (bucket_id = 'images');
+CREATE POLICY "Public Insert Images" ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'images');
+CREATE POLICY "Public Update Images" ON storage.objects FOR UPDATE TO public USING (bucket_id = 'images') WITH CHECK (bucket_id = 'images');
+CREATE POLICY "Public Delete Images" ON storage.objects FOR DELETE TO public USING (bucket_id = 'images');
+
+-- E. RELOAD SCHEMA CACHE TO INSTANTLY APPLY UPDATES
+NOTIFY pgrst, 'reload schema';`}
             </pre>
 
             <div className="mt-3 flex items-center gap-2 text-[10px] text-green-600 font-semibold uppercase tracking-wider">
