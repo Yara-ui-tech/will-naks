@@ -601,68 +601,261 @@ export default function AdminDashboard() {
       }
 
       let galleryList = gallery.data || [];
+      const containsOldComposite = galleryList.some((item: any) => item.category === 'Merchandise' && item.url && item.url.includes('products.png'));
+      if (containsOldComposite) {
+        try {
+          await supabase
+            .from('gallery')
+            .delete()
+            .eq('category', 'Merchandise');
+          galleryList = galleryList.filter((item: any) => item.category !== 'Merchandise');
+        } catch (e) {
+          console.error("Failed to clean old products:", e);
+        }
+      }
+
       const merchandiseItems = galleryList.filter((item: any) => item.category === 'Merchandise');
       if (merchandiseItems.length === 0) {
         try {
           const defaultItems = [
             {
-              url: '/assets/products.png',
+              url: '/tshirt.png',
               category: 'Merchandise',
               caption: JSON.stringify({
                 title: 'WILL-NAKS Branded Classic Tee',
                 price: 15,
-                description: 'Elegant navy soft tee with metallic gold foundation crest.',
+                description: 'Elegant navy soft-cotton tee featuring the metallic gold signature crown emblem.',
                 variants: 'S, M, L, XL, XXL',
                 in_stock: true,
-                crop: { scale: 220, x: 10, y: 10 }
+                crop: null
               })
             },
             {
-              url: '/assets/products.png',
+              url: '/polo_shirt.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Gold-Line pique Polo',
+                price: 25,
+                description: 'Elite knitted premium pique polo shirt, custom styled with gold collar details.',
+                variants: 'S, M, L, XL, XXL',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/hoodie.png',
               category: 'Merchandise',
               caption: JSON.stringify({
                 title: 'WILL-NAKS Premium Heavyweight Hoodie',
                 price: 35,
-                description: 'Premium fleece core hoodie with adjustable custom gold tipped toggle.',
+                description: 'High-density thermal fleece hoodie with adjustable custom metal tipped hood drawstring.',
                 variants: 'S, M, L, XL',
                 in_stock: true,
-                crop: { scale: 220, x: 90, y: 10 }
+                crop: null
               })
             },
             {
-              url: '/assets/products.png',
+              url: '/zipup_jacket.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Active Windrunner Jacket',
+                price: 40,
+                description: 'Water-resistant performance zipper windbreaker with interior safety storm pocketing.',
+                variants: 'S, M, L, XL, XXL',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/track_pants.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Elite Training Pants',
+                price: 30,
+                description: 'Slim taper performance fleeced jogger track pants with custom gold pocket accents.',
+                variants: 'S, M, L, XL',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/beanie.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Fisherman Winter Beanie',
+                price: 12,
+                description: 'Fine double-knit thermal snug-fit cap with high contrast front embroidery stripe.',
+                variants: 'One Size Fits All',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/cap.png',
               category: 'Merchandise',
               caption: JSON.stringify({
                 title: 'WILL-NAKS Structured Embroidered Cap',
                 price: 12,
-                description: 'Solid curved brim snapback with stitched metallic crest.',
+                description: '6-panel curved brim canvas snapback with clean high-density crown embroidery.',
                 variants: 'Adjustable Snapback',
                 in_stock: true,
-                crop: { scale: 220, x: 10, y: 90 }
+                crop: null
               })
             },
             {
-              url: '/assets/products.png',
+              url: '/bucket_hat.png',
               category: 'Merchandise',
               caption: JSON.stringify({
-                title: 'Harare Handcrafted Canvas Tote',
+                title: 'Harare Sun Protection Bucket Hat',
+                price: 15,
+                description: 'Durable wide-brim cotton twill sun protection utility hat, perfect for outdoor volunteers.',
+                variants: 'One Size Fits All',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/wristband.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Supporter Silicone Wristband',
+                price: 5,
+                description: "Embossed durable silicone charity bands featuring our 'Hope for Every Child' motif.",
+                variants: 'Single Size (Unisex)',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/lanyard_id.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Volunteer Official Lanyard',
+                price: 8,
+                description: 'High-grade satin-woven logo lanyard paired with heavy-duty secure steel hardware hook.',
+                variants: 'Standard Length',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/mug.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Matte Ceramic Coffee Mug',
                 price: 10,
-                description: 'Heavy duty premium woven cotton tote handpainted by young local artisans in Sunningdale, Harare.',
-                variants: 'One Size',
+                description: 'Heat-retaining matte finish 350ml ceramic coffee mug featuring custom high-gloss seal emblem.',
+                variants: '350ml Comfort Grip',
                 in_stock: true,
-                crop: { scale: 220, x: 90, y: 90 }
+                crop: null
               })
             },
             {
-              url: '/assets/products.png',
+              url: '/water_bottle.png',
               category: 'Merchandise',
               caption: JSON.stringify({
-                title: 'Fundraising Supporter Bundle',
-                price: 50,
-                description: 'Our full commemorative kit representing elite-level support (Classic Tee + Premium Hoodie + Embroidered Cap).',
-                variants: 'Custom sizes selection',
+                title: 'WILL-NAKS Insulated Thermal Bottle',
+                price: 20,
+                description: 'Double-wall vacuum sealed stainless steel sports bottle. Keeps beverages ice-cold for 24 hours.',
+                variants: '750ml Vacuum Sealing',
                 in_stock: true,
-                crop: { scale: 120, x: 50, y: 50 }
+                crop: null
+              })
+            },
+            {
+              url: '/notebook.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Gold Crest Hardcover Notebook',
+                price: 12,
+                description: 'A5 threadbound vegan leather hardcover docket containing 160 pages of premium cream grid sheets.',
+                variants: 'A5 Ruled Paper',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/ballpoint_pen.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Sleek Metal Executive Pen',
+                price: 6,
+                description: 'Weighted comfort gel-grip rollerball executive pen delivering high precision fluid writing lines.',
+                variants: 'Midnight Black Ink',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/tote_bag.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'Harare Hand-Painted Canvas Tote',
+                price: 10,
+                description: 'Reinforced ultra weight cotton tote bag hand-painted by local youth groups in Sunningdale, Harare.',
+                variants: 'Heavy Duty Woven Handles',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/drawstring_bag.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Utility Drawstring Backpack',
+                price: 10,
+                description: 'Ripstop nylon waterproof accessory pack with front zipper cord pocket.',
+                variants: 'One Size (Quick cinch)',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/satchel_bag.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Premium Day Messenger Bag',
+                price: 30,
+                description: 'Padded dual-lock multi-zip shoulder messenger satchel layout, designed for tablet and documents.',
+                variants: '12L Travel Ready',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/umbrella.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Windproof Compact Umbrella',
+                price: 18,
+                description: 'Auto-open, storm strength carbon fiber ribbing portable canopy umbrella on gold stem.',
+                variants: 'Automatic Compact Telescopic',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/premium_umbrella.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Professional Golf Umbrella',
+                price: 25,
+                description: 'Double-canopy wind vent 60-inch full protection golf umbrella with soft comfort EVA handle.',
+                variants: '60-inch Heavy Duty Protection',
+                in_stock: true,
+                crop: null
+              })
+            },
+            {
+              url: '/face_mask.png',
+              category: 'Merchandise',
+              caption: JSON.stringify({
+                title: 'WILL-NAKS Premium Breathable Face Mask',
+                price: 5,
+                description: 'Triple-layer cotton breathable fabric mask with ultra plush elastic adjustable earloops.',
+                variants: 'One Size Fits All (Washable)',
+                in_stock: true,
+                crop: null
               })
             }
           ];
@@ -2320,7 +2513,7 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                 const crop = details.crop || null;
 
                 return (
-                  <div key={img.id} className="bg-white rounded-3xl overflow-hidden border border-navy/5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between">
+                  <div key={img.id} className="bg-white rounded-3xl overflow-hidden border border-navy/5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between animate-in fade-in zoom-in duration-300">
                     <div className="relative aspect-square overflow-hidden bg-cream/10">
                       {crop ? (
                         <div 
@@ -2333,7 +2526,7 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                           }}
                         />
                       ) : (
-                        <img src={img.url} alt={title} className="w-full h-full object-cover" />
+                        <img src={img.url} alt={title} className="w-full h-full object-contain p-6 hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
                       )}
                       <div className="absolute top-3 right-3 flex gap-2">
                         <button 
