@@ -2182,6 +2182,33 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
               </button>
             </div>
 
+            {/* Comprehensive guide on Sandbox and Domain setup */}
+            <div className="bg-amber-50/40 p-6 rounded-3xl border border-amber-200/60 text-xs text-gray-700 leading-relaxed grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-bold text-amber-800 text-sm mb-1.5 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span>How to Obtain Your Resend API Key</span>
+                </h4>
+                <ol className="list-decimal list-inside space-y-1.5 text-gray-600">
+                  <li>Go to <a href="https://resend.com" target="_blank" rel="noreferrer" className="text-navy font-bold hover:underline">Resend.com</a> and sign up for a free developer account.</li>
+                  <li>Click on <strong>API Keys</strong> in your Resend dashboard sidebar.</li>
+                  <li>Generate a new API Key, copy it, and return to this page inside AI Studio.</li>
+                  <li>Open the <strong>Settings</strong> menu at the top-right of your AI Studio workspace interface, insert the token into the <strong>RESEND_API_KEY</strong> secret field, and click save.</li>
+                </ol>
+              </div>
+              <div className="border-t md:border-t-0 md:border-l border-amber-200/60 pt-4 md:pt-0 md:pl-6">
+                <h4 className="font-bold text-amber-800 text-sm mb-1.5 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span>How to Test Without a Custom Domain (Sandbox)</span>
+                </h4>
+                <p className="text-gray-600 mb-2">
+                  When you don't possess a custom domain yet, you can test live delivery in the Resend Sandbox:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-gray-600">
+                  <li>Set the <strong>EMAIL_FROM</strong> environment variable in Settings to: <code className="bg-amber-100 font-mono text-[10px] px-1.5 py-0.5 rounded text-amber-900 font-bold">onboarding@resend.dev</code></li>
+                  <li>When logging a test donation, make sure to enter the **same email address** you used to register on Resend. The sandbox only sends emails to your registered developer email address.</li>
+                </ul>
+              </div>
+            </div>
+
             {dispatchedEmails.length === 0 ? (
               <div className="bg-white rounded-[2rem] p-12 text-center border border-gray-100 max-w-xl mx-auto shadow-sm">
                 <div className="w-16 h-16 bg-navy/5 rounded-full flex items-center justify-center mx-auto mb-4 text-navy">

@@ -55,7 +55,7 @@ async function startServer() {
     const resendKey = process.env.RESEND_API_KEY;
     if (resendKey) {
       try {
-        const fromEmail = process.env.EMAIL_FROM || "Will-Naks Foundation <noreply@will-naks.org>";
+        const fromEmail = process.env.EMAIL_FROM || "Will-Naks Foundation <info@will-naksfoundation.org>";
         const response = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
