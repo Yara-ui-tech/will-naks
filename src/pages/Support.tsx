@@ -536,7 +536,8 @@ export default function Support() {
           message: data.message,
           email: data.email,
           website_url: data.website_url || null,
-          logo_url: logoUrl
+          logo_url: logoUrl,
+          specialty: data.specialty || null
         }]);
         if (error) throw error;
       } else if (activeTab === 'volunteer') {
@@ -945,6 +946,10 @@ export default function Support() {
                        )}
                     </div>
                     <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 font-sans">Business Specialty & Advertising Focus</label>
+                      <input required name="specialty" type="text" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5 mb-4" placeholder="e.g. Premium solar energy solutions, EdTech development, logistics handling" />
+                      <p className="text-[10px] text-gray-400 ml-1 mb-6">Describe what your organization specializes in. This will be published in our live Partners directory upon corporate admin approval.</p>
+                      
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 font-sans">Proposed Partnership Area</label>
                       <textarea name="message" className="w-full px-6 py-4 bg-cream/50 rounded-xl focus:ring-2 focus:ring-gold outline-none border border-navy/5 h-32" placeholder="Tell us how you would like to collaborate..."></textarea>
                     </div>
@@ -1492,14 +1497,14 @@ export default function Support() {
                     <div className="space-y-8">
                       <div className="flex flex-col sm:flex-row justify-between items-center bg-cream/20 border border-gold/15 p-6 rounded-3xl gap-4">
                         <div className="text-left font-sans">
-                          <p className="font-bold text-navy text-sm uppercase tracking-wider">Full Catalog Available</p>
-                          <p className="text-xs text-gray-500">We suggest downloading our composite catalog sheet for physical printing or offline reference.</p>
+                          <p className="font-bold text-navy text-sm uppercase tracking-wider">Featured Shop Item</p>
+                          <p className="text-xs text-gray-500">Download the official print card for our custom WILL-NAKS foundation flagship attire.</p>
                         </div>
                         <button
                           onClick={() => {
                             const link = document.createElement('a');
-                            link.href = '/assets/products.png';
-                            link.download = 'will_naks_merchandise_catalog.png';
+                            link.href = '/tshirt.png';
+                            link.download = 'will_naks_featured_tee.png';
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
@@ -1507,7 +1512,7 @@ export default function Support() {
                           className="flex items-center space-x-2 bg-navy hover:bg-navy/95 text-white font-bold text-xs uppercase px-5 py-3 rounded-xl shadow transition-all hover:scale-[1.02] active:scale-95"
                         >
                           <Download className="h-4 w-4" />
-                          <span>Download Full Catalog Image</span>
+                          <span>Download Flagship Tee Card</span>
                         </button>
                       </div>
 

@@ -2062,10 +2062,22 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                       <option value="pending">Pending</option>
                       <option value="contacted">Contacted</option>
                       <option value="partnered">Partnered</option>
+                      <option value="approved">Approved & Displayed</option>
                     </select>
                   </div>
                 </div>
-                <p className="text-gray-600 text-sm leading-relaxed">{p.message}</p>
+                <div className="space-y-3">
+                  {p.specialty && (
+                    <div className="p-3 bg-gold/5 border border-gold/20 rounded-xl">
+                      <span className="text-[10px] uppercase text-gold font-bold tracking-wider block mb-0.5">Advertising Specialty & Focus</span>
+                      <p className="text-xs font-semibold text-navy leading-relaxed">{p.specialty}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-[10px] uppercase text-gray-400 font-bold tracking-wider block mb-0.5">Proposed Partnership Collaboration Message</span>
+                    <p className="text-gray-600 text-sm leading-relaxed">{p.message}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -4105,6 +4117,7 @@ ALTER TABLE public.donations ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAUL
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS website_url TEXT;
 ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS specialty TEXT;
 
 ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS date_of_birth TEXT;
 ALTER TABLE public.scholarships ADD COLUMN IF NOT EXISTS age INTEGER;

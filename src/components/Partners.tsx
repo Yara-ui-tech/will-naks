@@ -13,7 +13,10 @@ export default function Partners() {
 
   const fetchPartners = async () => {
     try {
-      const { data } = await supabase.from('partners').select('*');
+      const { data } = await supabase
+        .from('partners')
+        .select('*')
+        .eq('status', 'approved');
       setPartners(data || []);
     } catch (err) {
       console.warn('Failed to fetch partners from database:', err);
@@ -38,6 +41,20 @@ export default function Partners() {
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gold"></div>
+          </div>
+        ) : partners.length === 0 ? (
+          <div className="text-center p-12 bg-white rounded-3xl border border-gray-100 shadow-md max-w-lg mx-auto">
+            <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mx-auto text-gold text-2xl mb-4">🤝</div>
+            <h4 className="text-lg font-bold text-navy">No approved corporate partners yet</h4>
+            <p className="text-sm text-gray-500 mt-2 mb-6">
+              Be the first organization to partner with WILL-NAKS! Direct your business specialty, run ad campaigns, and promote your brand while making a true impact.
+            </p>
+            <a 
+              href="/support?tab=partner" 
+              className="inline-block bg-navy hover:bg-navy/95 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-95"
+            >
+              Become a Corporate Partner
+            </a>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -68,9 +85,15 @@ export default function Partners() {
                       <h4 className="text-2xl font-bold text-navy">{partner.org_name}</h4>
                       <span className="bg-gold/10 text-navy text-[10px] uppercase font-bold px-2.5 py-1 rounded-full border border-gold/20">{partner.industry}</span>
                     </div>
+                    {partner.specialty && (
+                      <div className="mb-4 text-xs bg-navy/5 text-navy p-3 rounded-xl border border-gold/10 text-left">
+                        <span className="font-bold text-[9px] uppercase text-gold tracking-wider block mb-0.5">Core Specialty & Ad Campaign:</span>
+                        <p className="text-gray-700 leading-normal font-sans font-semibold">{partner.specialty}</p>
+                      </div>
+                    )}
                     <div className="flex items-start gap-2 text-gray-600 mb-4 justify-center md:justify-start">
-                      <Briefcase className="h-4 w-4 mt-1 text-gold flex-shrink-0" />
-                      <p className="text-base leading-relaxed italic text-gray-500">"{partner.message}"</p>
+                      <Briefcase className="h-4 w-4 mt-0.5 text-gold flex-shrink-0" />
+                      <p className="text-xs leading-relaxed italic text-gray-500">"{partner.message}"</p>
                     </div>
                     {partner.website_url ? (
                       <a 

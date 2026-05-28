@@ -216,7 +216,9 @@ CREATE TABLE IF NOT EXISTS partners (
   message TEXT NOT NULL,
   email TEXT NOT NULL,
   status TEXT DEFAULT 'pending',
-  website_url TEXT
+  website_url TEXT,
+  specialty TEXT,
+  logo_url TEXT
 );
 
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
