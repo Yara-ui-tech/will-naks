@@ -118,6 +118,19 @@ export default function AdminDashboard() {
   });
   const [uploadingMerchImage, setUploadingMerchImage] = useState(false);
 
+  // Admin Direct Partner states
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
+  const [partnerForm, setPartnerForm] = useState({
+    org_name: '',
+    industry: '',
+    email: '',
+    website_url: '',
+    specialty: '',
+    message: '',
+    status: 'approved'
+  });
+  const [savingPartner, setSavingPartner] = useState(false);
+
   // Donation Receipts States
   const [selectedDonationForReceipt, setSelectedDonationForReceipt] = useState<any>(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
@@ -505,6 +518,51 @@ export default function AdminDashboard() {
       fetchData(true);
     } catch (err: any) {
       alert('Failed to save product: ' + err.message);
+    }
+  };
+
+  const handleSavePartner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!partnerForm.org_name.trim()) {
+      alert('Organization name is required.');
+      return;
+    }
+    if (!partnerForm.email.trim()) {
+      alert('Contact email is required.');
+      return;
+    }
+    
+    setSavingPartner(true);
+    try {
+      const { error } = await supabase
+        .from('partners')
+        .insert([{
+          org_name: partnerForm.org_name.trim(),
+          industry: partnerForm.industry.trim() || 'General Partnership',
+          email: partnerForm.email.trim(),
+          website_url: partnerForm.website_url.trim() || null,
+          specialty: partnerForm.specialty.trim() || null,
+          message: partnerForm.message.trim() || 'Added directly by administrator',
+          status: partnerForm.status
+        }]);
+
+      if (error) throw error;
+
+      setIsPartnerModalOpen(false);
+      setPartnerForm({
+        org_name: '',
+        industry: '',
+        email: '',
+        website_url: '',
+        specialty: '',
+        message: '',
+        status: 'approved'
+      });
+      fetchData(true);
+    } catch (err: any) {
+      alert('Failed to add partner: ' + err.message);
+    } finally {
+      setSavingPartner(false);
     }
   };
 
@@ -1454,6 +1512,11 @@ export default function AdminDashboard() {
             {activeView === 'merchandise' && (
               <button onClick={openAddMerchProduct} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
                 <Plus className="h-4 w-4" /> <span>Add Product</span>
+              </button>
+            )}
+            {activeView === 'partners' && (
+              <button onClick={() => setIsPartnerModalOpen(true)} className="bg-gold text-navy px-4 py-2 rounded-lg font-bold flex items-center space-x-2 flex-grow sm:flex-grow-0">
+                <Plus className="h-4 w-4" /> <span>Add Partner</span>
               </button>
             )}
           </div>
@@ -2800,6 +2863,120 @@ CREATE POLICY "Admins manage profiles" ON public.profiles FOR ALL USING (
                 className="w-full py-4 bg-navy text-white rounded-2xl font-bold hover:bg-navy/95 transition-all text-sm mt-4 disabled:opacity-50"
               >
                 {editingMerchId ? 'Save Product Customizations' : 'Create Live Fundraising Product'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Direct Partner Addition Modal Overlay */}
+      {isPartnerModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4 font-sans animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] p-8 w-full max-w-lg border border-navy/5 shadow-2xl relative text-left animate-in zoom-in duration-300">
+            <button 
+              onClick={() => setIsPartnerModalOpen(false)}
+              className="absolute top-5 right-5 text-gray-400 hover:text-navy hover:scale-105 transition-all text-sm font-bold bg-gray-100 p-2 rounded-full cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-2xl font-serif font-bold text-navy mb-1 italic">
+              Add New Partner
+            </h3>
+            <p className="text-xs text-gray-500 mb-6 font-sans">Create a corporate partner from the admin interface directly. They will be displayed in the live registry after configuration.</p>
+
+            <form onSubmit={handleSavePartner} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Organization Name</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={partnerForm.org_name}
+                  onChange={(e) => setPartnerForm(prev => ({ ...prev, org_name: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm" 
+                  placeholder="e.g. EcoCash Zimbabwe, SolarPro" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Industry Sector</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={partnerForm.industry}
+                    onChange={(e) => setPartnerForm(prev => ({ ...prev, industry: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm" 
+                    placeholder="e.g. Fintech, Solar, Logistics" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Contact Email</label>
+                  <input 
+                    required 
+                    type="email" 
+                    value={partnerForm.email}
+                    onChange={(e) => setPartnerForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm" 
+                    placeholder="partner@example.com" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Website / Campaign URL</label>
+                <input 
+                  type="text" 
+                  value={partnerForm.website_url}
+                  onChange={(e) => setPartnerForm(prev => ({ ...prev, website_url: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm" 
+                  placeholder="e.g. www.ecocash.co.zw" 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Core Specialty & Ad Campaign Description</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={partnerForm.specialty}
+                  onChange={(e) => setPartnerForm(prev => ({ ...prev, specialty: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm" 
+                  placeholder="e.g. Premium solar utilities & backup energy storage systems" 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Proposed Collaboration / Admin Notes</label>
+                <textarea 
+                  required 
+                  value={partnerForm.message}
+                  onChange={(e) => setPartnerForm(prev => ({ ...prev, message: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm h-20 resize-none font-sans" 
+                  placeholder="e.g. Direct partnership authorized by WILL-NAKS team board."
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Initial Directory Status</label>
+                <select 
+                  value={partnerForm.status}
+                  onChange={(e) => setPartnerForm(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-gold focus:bg-white text-sm"
+                >
+                  <option value="approved">Approved & Displayed (Live)</option>
+                  <option value="pending">Pending Review</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="partnered">Partnered</option>
+                </select>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={savingPartner}
+                className="w-full py-4 bg-navy text-white rounded-2xl font-bold hover:bg-navy/95 transition-all text-sm mt-4 disabled:opacity-50"
+              >
+                {savingPartner ? 'Adding Partner...' : 'Create Partner Account'}
               </button>
             </form>
           </div>
